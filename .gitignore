@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+.python-version
+.uv/
+data/pokedex.sqlite
+.claude/settings.local.json
