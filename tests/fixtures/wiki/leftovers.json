@@ -1,0 +1,140 @@
+{
+ "requested": "Leftovers",
+ "title": "Leftovers",
+ "revid": 4590205,
+ "size": 16658,
+ "sections": [
+  {
+   "index": "1",
+   "line": "In the core series games",
+   "level": 2
+  },
+  {
+   "index": "2",
+   "line": "Price",
+   "level": 3
+  },
+  {
+   "index": "3",
+   "line": "Effect",
+   "level": 3
+  },
+  {
+   "index": "4",
+   "line": "Held item",
+   "level": 4
+  },
+  {
+   "index": "5",
+   "line": "Pokémon Legends: Z-A",
+   "level": 5
+  },
+  {
+   "index": "6",
+   "line": "Bag item",
+   "level": 4
+  },
+  {
+   "index": "7",
+   "line": "Description",
+   "level": 3
+  },
+  {
+   "index": "8",
+   "line": "Acquisition",
+   "level": 3
+  },
+  {
+   "index": "9",
+   "line": "Distribution",
+   "level": 4
+  },
+  {
+   "index": "10",
+   "line": "As a held item",
+   "level": 5
+  },
+  {
+   "index": "11",
+   "line": "Gallery",
+   "level": 2
+  },
+  {
+   "index": "12",
+   "line": "Artwork",
+   "level": 3
+  },
+  {
+   "index": "13",
+   "line": "In the spin-off games",
+   "level": 2
+  },
+  {
+   "index": "14",
+   "line": "Pokémon: Magikarp Jump",
+   "level": 3
+  },
+  {
+   "index": "15",
+   "line": "Pokémon UNITE",
+   "level": 3
+  },
+  {
+   "index": "16",
+   "line": "Pokémon Pokopia",
+   "level": 3
+  },
+  {
+   "index": "17",
+   "line": "Acquisition",
+   "level": 4
+  },
+  {
+   "index": "18",
+   "line": "In the manga",
+   "level": 2
+  },
+  {
+   "index": "19",
+   "line": "Pokémon Adventures",
+   "level": 3
+  },
+  {
+   "index": "20",
+   "line": "<i>Emerald</i> arc",
+   "level": 4
+  },
+  {
+   "index": "21",
+   "line": "In the TCG",
+   "level": 2
+  },
+  {
+   "index": "22",
+   "line": "Merchandise",
+   "level": 2
+  },
+  {
+   "index": "23",
+   "line": "Trivia",
+   "level": 2
+  },
+  {
+   "index": "24",
+   "line": "In other languages",
+   "level": 2
+  },
+  {
+   "index": "25",
+   "line": "External links",
+   "level": 2
+  }
+ ],
+ "raw": null,
+ "parsetrees": {
+  "8": "<root><h level=\"3\" i=\"1\">===Acquisition===</h>\n<template lineStart=\"1\"><title>ItemAvailability/head</title><part><name index=\"1\"/><value>items</value></part></template>\n|-\n| <template><title>gameabbrev2</title><part><name index=\"1\"/><value>GSC</value></part></template>\n| [[Celadon City]] Restaurant&lt;br/&gt;Held by [[List of in-game event Pokémon in Generation II#Snorlax|the wild Snorlax]]\n| Held by <template><title>wild</title><part><name index=\"1\"/><value>Clefable</value></part><part><name>g</name><equals>=</equals><value>2</value></part></template> and <template><title>wild</title><part><name index=\"1\"/><value>Snorlax</value></part><part><name>g</name><equals>=</equals><value>2</value></part></template> from [[Generation I]]\n|-\n| <template><title>gameabbrev3</title><part><name index=\"1\"/><value>RSE</value></part></template>\n| [[S.S. Tidal]]\n| <template><title>gdis</title><part><name index=\"1\"/><value>Battle Tower</value></part><part><name index=\"2\"/><value>III</value></part></template> (35+ win streak)<template><title>sup/3</title><part><name index=\"1\"/><value>RS</value></part></template>, <template><title>Gdis</title><part><name index=\"1\"/><value>Battle Frontier</value></part><part><name index=\"2\"/><value>III</value></part></template> (48 [[Battle Point|BP]])<template><title>sup/3</title><part><name index=\"1\"/><value>E</value></part></template>&lt;br&gt;<template><title>a</title><part><name index=\"1\"/><value>Pickup</value></part></template> ([[Level|Lv.]] 81-100<template><title>sup/3</title><part><name index=\"1\"/><value>E</value></part></template>)\n|-\n| <template><title>gameabbrev3</title><part><name index=\"1\"/><value>FRLG</value></part></template>\n| [[Route]]s <template><title>rtn</title><part><name index=\"1\"/><value>12</value></part><part><name index=\"2\"/><value>Kanto</value></part></template> and <template><title>rtn</title><part><name index=\"1\"/><value>16</value></part><part><name index=\"2\"/><value>Kanto</value></part></template>\n|\n|-\n| <template><title>gameabbrevss</title><part><name index=\"1\"/><value>Colo</value></part></template>\n|\n| [[Mt. Battle]] (10,000 [[Poké Coupon]]s)\n|-\n| <template><title>gameabbrevss</title><part><name index=\"1\"/><value>XD</value></part></template>\n| [[S.S. Libra]]&lt;br&gt;Held by <template><title>Shadow</title><part><name index=\"1\"/><value>Snorlax</value></part></template>\n| <template><title>a</title><part><name index=\"1\"/><value>Pickup</value></part></template> ([[Level|Lv.]] 81–100)\n|-\n| <template><title>gameabbrev4</title><part><name index=\"1\"/><value>DPPt</value></part></template>\n| <template><title>si</title><part><name index=\"1\"/><value>Victory Road</value></part></template>\n| Held by <template><title>wild</title><part><name index=\"1\"/><value>Munchlax</value></part></template> (100% chance), <template><title>a</title><part><name index=\"1\"/><value>Pickup</value></part></template> ([[Level|Lv.]] 81–100)\n|-\n| <template><title>gameabbrev4</title><part><name index=\"1\"/><value>HGSS</value></part></template>\n|\n| Held by <template><title>wild</title><part><name index=\"1\"/><value>Snorlax</value></part></template> (100% chance)&lt;br&gt;<template><title>a</title><part><name index=\"1\"/><value>Pickup</value></part></template> ([[Level|Lv.]] 81–100)&lt;br&gt;[[Indigo Plateau]] (held by [[Koga]]'s <template><title>p</title><part><name index=\"1\"/><value>Swalot</value></part></template> in [[rematch]]es)\n|-\n| <template><title>gameabbrevss</title><part><name index=\"1\"/><value>PW</value></part></template>\n|\n| <template><title>pw</title><part><name index=\"1\"/><value>Winner's Path</value></part></template> (held by wild <template><title>p</title><part><name index=\"1\"/><value>Munchlax</value></part></template>, <template><title>tt</title><part><name index=\"1\"/><value>8000+</value></part><part><name index=\"2\"/><value>Advantageous type: 6000+</value></part></template> steps)\n|-\n| <template><title>gameabbrevss</title><part><name index=\"1\"/><value>PBR</value></part></template>\n|\n| <template><title>DL</title><part><name index=\"1\"/><value>Pokémon Battle Revolution</value></part><part><name index=\"2\"/><value>Shop</value></part></template> (7200 [[Poké Coupon]]s)\n|-\n| <template><title>gameabbrev5</title><part><name index=\"1\"/><value>BW</value></part></template>\n| [[Village Bridge]], [[Undella Town]] (held by [[in-game trade]] <template><title>p</title><part><name index=\"1\"/><value>Munchlax</value></part></template>)<template><title>sup/s</title><part><name index=\"1\"/><value>Su</value></part></template>\n| <template><title>a</title><part><name index=\"1\"/><value>Pickup</value></part></template> ([[Level|Lv.]] 81–100)\n|-\n| <template><title>gameabbrev5</title><part><name index=\"1\"/><value>B2W2</value></part></template>\n| [[Castelia Sewers]]\n| <template><title>a</title><part><name index=\"1\"/><value>Pickup</value></part></template> ([[Level|Lv.]] 81–100)\n|-\n| <template><title>gameabbrevss</title><part><name index=\"1\"/><value>DW</value></part></template><template><title>tt</title><part><name index=\"1\"/><value>*</value></part><part><name index=\"2\"/><value>No longer in service</value></part></template>\n|\n| <template><title>dwa</title><part><name index=\"1\"/><value>Dream Park</value></part></template>\n|-\n| <template><title>gameabbrev6</title><part><name index=\"1\"/><value>XY</value></part></template>\n| <template><title>rt</title><part><name index=\"1\"/><value>12</value></part><part><name index=\"2\"/><value>Kalos</value></part></template>\n| <template><title>a</title><part><name index=\"1\"/><value>Pickup</value></part></template> ([[Level|Lv.]] 81–100)\n|-\n| <template><title>gameabbrev6</title><part><name index=\"1\"/><value>ORAS</value></part></template>\n| [[S.S. Tidal]]\n| <template><title>a</title><part><name index=\"1\"/><value>Pickup</value></part></template> ([[Level|Lv.]] 81–100)\n|-\n| <template><title>gameabbrev7</title><part><name index=\"1\"/><value>SMUSUM</value></part></template>\n|\n| [[Battle Royal Dome]] (48 [[Battle Point|BP]])&lt;br&gt;Held by <template><title>wild</title><part><name index=\"1\"/><value>Munchlax</value></part></template> and <template><title>wild</title><part><name index=\"1\"/><value>Snorlax</value></part></template> (100% chance each)&lt;br&gt;<template><title>a</title><part><name index=\"1\"/><value>Pickup</value></part></template> (any [[level]])\n|-\n| <template><title>gameabbrev8</title><part><name index=\"1\"/><value>SwSh</value></part></template>\n| [[Giant's Seat]]\n| [[Berry tree]]s ([[Bridge Field]], [[Giant's Cap]], [[Giant's Mirror]], [[Hammerlocke Hills]], [[Lake of Outrage]], [[Motostoke Riverbank]])&lt;br&gt;Held by <template><title>wild</title><part><name index=\"1\"/><value>Munchlax</value></part></template> (100% chance)&lt;br&gt;<template><title>a</title><part><name index=\"1\"/><value>Pickup</value></part></template> ([[Level|Lv.]] 21–100)&lt;br&gt;Held by [[List of event Pokémon distributions in Pokémon Sword and Shield#Zarude|Jungle Zarude]]\n|-\n| <template><title>gameabbrev8</title><part><name index=\"1\"/><value>BDSP</value></part></template>\n| <template><title>si</title><part><name index=\"1\"/><value>Victory Road</value></part></template>, [[Grand Underground]]\n| <template><title>a</title><part><name index=\"1\"/><value>Pickup</value></part></template> ([[Level|Lv.]] 21–100)\n|-\n| <template><title>gameabbrev9</title><part><name index=\"1\"/><value>SV</value></part></template>\n| [[Medali]]\n| [[Delibird Presents]] ([[Cascarrafa]] Branch)&lt;br&gt;<template><title>a</title><part><name index=\"1\"/><value>Pickup</value></part></template> ([[Level|Lv.]] 21–100)\n|-\n| <template><title>gameabbrev9</title><part><name index=\"1\"/><value>SV</value></part></template><template><title>gameabbrev9</title><part><name index=\"1\"/><value>ID</value></part></template>\n|\n| [[Item Printer]]\n|-\n| <template><title>gameabbrev9</title><part><name index=\"1\"/><value>ZA</value></part></template>\n| [[Vert Sector 6]] (reward for completing [[Mission (Legends: Z-A)#Side missions|Side Mission 068: &quot;The Best Use for Leftovers&quot;]])\n| [[Racine Construction]]\n|-\n| <template><title>gameabbrevss</title><part><name index=\"1\"/><value>Champs</value></part></template>\n| Initial inventory\n|\n|}\n|}\n\n<h level=\"4\" i=\"2\">====Distribution====</h>\n{| class=&quot;roundy&quot; style=&quot;background: #<template><title>items color light</title></template>; border: 5px solid #<template><title>items color</title></template>&quot;\n|-\n|\n{| border=1 style=&quot;background:#FFF; border:1px solid #<template><title>items color light</title></template>; border-collapse:collapse&quot;\n|-\n! style=&quot;background:#FFF; <template><title>roundytl</title><part><name index=\"1\"/><value>5px</value></part></template>&quot; | Games\n! style=&quot;background:#FFF&quot; | Event\n! style=&quot;background:#FFF&quot; | Language/Region\n! style=&quot;background:#FFF; <template><title>roundytr</title><part><name index=\"1\"/><value>5px</value></part></template>&quot; | Distribution period\n|- style=&quot;background:#FFF;&quot;\n| rowspan=2 | <template><title>gameabbrev9</title><part><name index=\"1\"/><value>SV</value></part></template>\n| <template><title>DL</title><part><name index=\"1\"/><value>List of other event distributions in Generation IX</value></part><part><name index=\"2\"/><value>Lotte World Mall battle item set</value></part></template>\n| South Korea\n| April 29 to May 31, 2023\n|- style=&quot;background:#FFF;&quot;\n| <template><title>DL</title><part><name index=\"1\"/><value>List of other event distributions in Generation IX</value></part><part><name index=\"2\"/><value>Summer training support sets</value></part></template>\n| Japan\n| July 22 to September 30, 2023\n|}\n|}\n\n<h level=\"5\" i=\"3\">=====As a [[held item]]=====</h>\n{| class=&quot;roundy&quot; style=&quot;background: #<template><title>items color light</title></template>; border: 5px solid #<template><title>items color</title></template>&quot;\n|-\n|\n{| border=1 style=&quot;background:#FFF; border:1px solid #<template><title>items color light</title></template>; border-collapse:collapse&quot;\n|-\n! style=&quot;background:#FFF; <template><title>roundytl</title><part><name index=\"1\"/><value>5px</value></part></template>&quot; | Games\n! style=&quot;background:#FFF&quot; | Event\n! style=&quot;background:#FFF&quot; | Language/Region\n! style=&quot;background:#FFF; <template><title>roundytr</title><part><name index=\"1\"/><value>5px</value></part></template>&quot; | Distribution period\n|- style=&quot;background:#FFF;&quot;\n| <template><title>gameabbrev4</title><part><name index=\"1\"/><value>DP</value></part></template>\n| <template><title>DL</title><part><name index=\"1\"/><value>List of local Japanese event Pokémon distributions in Generation IV</value></part><part><name index=\"2\"/><value>2008 World Championships Lucario</value></part></template>\n| United States\n| August 17, 2008\n|- style=&quot;background:#FFF;&quot;\n| <template><title>gameabbrev4</title><part><name index=\"1\"/><value>DPPt</value></part></template>\n| <template><title>DL</title><part><name index=\"1\"/><value>List of local Korean event Pokémon distributions in Generation IV</value></part><part><name index=\"2\"/><value>Munchlax</value></part><part><name index=\"3\"/><value>Shinsegae Department Store Munchlax</value></part></template>\n| Korean\n| July 4 to 5, 2009\n|- style=&quot;background:#FFF;&quot;\n| <template><title>gameabbrev5</title><part><name index=\"1\"/><value>BW</value></part></template>\n| <template><title>DL</title><part><name index=\"1\"/><value>List of local Japanese event Pokémon distributions in Generation V</value></part><part><name index=\"2\"/><value>2011 World Championships Scrafty</value></part></template>\n| United States\n| August 14, 2011\n|- style=&quot;background:#FFF;&quot;\n| <template><title>gameabbrev5</title><part><name index=\"1\"/><value>BWB2W2</value></part></template>\n| <template><title>DL</title><part><name index=\"1\"/><value>List of local Japanese event Pokémon distributions in Generation V</value></part><part><name index=\"2\"/><value>Serperior</value></part><part><name index=\"3\"/><value>Pokémon Center 15th Anniversary Serperior</value></part></template>\n| Japanese\n| May 22 to 28, 2013&lt;br&gt;July 3 to 7, 2013\n|- style=&quot;background:#FFF;&quot;\n| rowspan=2 | <template><title>gameabbrev6</title><part><name index=\"1\"/><value>XYORAS</value></part></template>\n| <template><title>DL</title><part><name index=\"1\"/><value>List of Japanese region serial code event Pokémon distributions in Generation VI</value></part><part><name index=\"2\"/><value>Lugia</value></part><part><name index=\"3\"/><value>7-Eleven Lugia</value></part></template>\n| Japanese\n| August 1 to September 30, 2015\n|- style=&quot;background:#FFF;&quot;\n| <template><title>DL</title><part><name index=\"1\"/><value>List of Japanese region Nintendo Network event Pokémon distributions in Generation VI</value></part><part><name index=\"2\"/><value>Lugia</value></part><part><name index=\"3\"/><value>Pokémon Center Lugia</value></part></template>\n| Japanese\n| September 7 to 13, 2015\n|- style=&quot;background:#FFF;&quot;\n| <template><title>gameabbrev7</title><part><name index=\"1\"/><value>SM</value></part></template>\n| <template><title>DL</title><part><name index=\"1\"/><value>List of local event Pokémon distributions in Pokémon Sun, Moon, Ultra Sun, and Ultra Moon</value></part><part><name index=\"2\"/><value>North American International Championships 2017 Arcanine</value></part></template>\n| United States\n| June 30 to July 2, 2017\n|- style=&quot;background:#FFF;&quot;\n| rowspan=4 | <template><title>gameabbrev8</title><part><name index=\"1\"/><value>SwSh</value></part></template>\n| <template><title>DL</title><part><name index=\"1\"/><value>List of event Pokémon distributions in Pokémon Sword and Shield</value></part><part><name index=\"2\"/><value>Zarude</value></part><part><name index=\"3\"/><value>Jungle Pokémon</value></part></template>\n| Japan\n| August 7, 2020 to March 31, 2021\n|- style=&quot;background:#FFF;&quot;\n| <template><title>DL</title><part><name index=\"1\"/><value>List of event Pokémon distributions in Pokémon Sword and Shield</value></part><part><name index=\"2\"/><value>International Jungle Zarude</value></part></template>\n| All\n| November 13, 2020 to March 31, 2021\n|- style=&quot;background:#FFF;&quot;\n| <template><title>DL</title><part><name index=\"1\"/><value>List of event Pokémon distributions in Pokémon Sword and Shield</value></part><part><name index=\"2\"/><value>Zarude</value></part><part><name index=\"3\"/><value>Korean Jungle Pokémon</value></part></template>\n| Korea\n| September 15 to November 30, 2021\n|- style=&quot;background:#FFF;&quot;\n| <template><title>DL</title><part><name index=\"1\"/><value>List of event Pokémon distributions in Pokémon Sword and Shield</value></part><part><name index=\"2\"/><value>Eric Rios's East Sea Gastrodon</value></part></template>\n| All\n| June 24 to 27, 2022\n|- style=&quot;background:#FFF;&quot;\n| rowspan=4 | <template><title>gameabbrev9</title><part><name index=\"1\"/><value>SV</value></part></template>\n| <template><title>DL</title><part><name index=\"1\"/><value>List of event Pokémon distributions in Pokémon Scarlet and Violet</value></part><part><name index=\"2\"/><value>Jiseok Lee's Garganacl</value></part></template>\n| All\n| February 16 to 20, 2023\n|- style=&quot;background:#FFF;&quot;\n| <template><title>DL</title><part><name index=\"1\"/><value>List of event Pokémon distributions in Pokémon Scarlet and Violet</value></part><part><name index=\"2\"/><value>Yasuharu Shimizu's Bronzong</value></part></template>\n| All\n| June 10 to 11, 2023\n|- style=&quot;background:#FFF;&quot;\n| <template><title>DL</title><part><name index=\"1\"/><value>List of event Pokémon distributions in Pokémon Scarlet and Violet</value></part><part><name index=\"2\"/><value>Wonseok Jung's East Sea Gastrodon</value></part></template>\n| All\n| June 17 to 19, 2023\n|- style=&quot;background:#FFF;&quot;\n| <template><title>DL</title><part><name index=\"1\"/><value>List of event Pokémon distributions in Pokémon Scarlet and Violet</value></part><part><name index=\"2\"/><value>Eduardo Cunha's East Sea Gastrodon</value></part></template>\n| All\n| August 10 to 14, 2023\n|}\n|}</root>",
+  "3": "<root><h level=\"3\" i=\"1\">===Effect===</h>\n<h level=\"4\" i=\"2\">====Held item====</h>\nRestores 1/16 of the holder's maximum <template><title>stat</title><part><name index=\"1\"/><value>HP</value></part></template> (rounded down, but not less than 1) at the end of each turn.\n\nIn [[Generation IV]], Leftovers are able to heal the holder regardless of <template><title>m</title><part><name index=\"1\"/><value>Heal Block</value></part></template>. From [[Generation V]] onwards, Leftovers cannot heal Pokémon affected by Heal Block.\n\n<h level=\"5\" i=\"3\">=====Pokémon Legends: Z-A=====</h>\nLeftovers restores health once every 10 seconds, even outside of battle, as long as the holder is outside its Poké Ball.\n\n<h level=\"4\" i=\"4\">====Bag item====</h>\nWhen fed into the [[Cram-o-matic]], it is a <template><title>type</title><part><name index=\"1\"/><value>Grass</value></part></template> ingredient that gives 20 points towards the output value.</root>",
+  "17": "<root><h level=\"4\" i=\"1\">====Acquisition====</h>\n<template lineStart=\"1\"><title>ItemAvailability/head</title><part><name index=\"1\"/><value>items</value></part></template>\n|-\n| <template><title>gameabbrevss</title><part><name index=\"1\"/><value>Pokopia</value></part></template>\n| \n| [[Appraise (specialty)|Appraise]] small [[lost relic]]s.\n|}\n|}</root>"
+ },
+ "prefix_search": {}
+}

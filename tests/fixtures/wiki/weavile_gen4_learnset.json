@@ -1,0 +1,61 @@
+{
+ "requested": "Weavile (Pokémon)/Generation IV learnset",
+ "title": "Weavile (Pokémon)/Generation IV learnset",
+ "revid": 4460936,
+ "size": 10233,
+ "sections": [
+  {
+   "index": "1",
+   "line": "By leveling up",
+   "level": 4
+  },
+  {
+   "index": "2",
+   "line": "By TM/HM",
+   "level": 4
+  },
+  {
+   "index": "3",
+   "line": "By breeding",
+   "level": 4
+  },
+  {
+   "index": "4",
+   "line": "By tutoring",
+   "level": 4
+  },
+  {
+   "index": "5",
+   "line": "By a prior Evolution",
+   "level": 4
+  },
+  {
+   "index": "6",
+   "line": "By transfer from another generation",
+   "level": 4
+  },
+  {
+   "index": "7",
+   "line": "By transfer, only via prior Evolution",
+   "level": 5
+  },
+  {
+   "index": "8",
+   "line": "By events",
+   "level": 4
+  }
+ ],
+ "raw": "{{pokelinkback|461|Weavile|4}}\n====By [[Level|leveling up]]====\n{{learnlist/levelh|Weavile|dark|ice|4|4}}\n{{learnlist/level4|1|Assurance|Dark|Physical|50|100|10|Beauty|2||'''}}\n{{learnlist/level4|1|Embargo|Dark|Status|—|100|15|Cute|2}}\n{{learnlist/level4|1|Revenge|Fighting|Physical|60|100|10|Tough|2}}\n{{learnlist/level4|1|Scratch|Normal|Physical|40|100|35|Tough|3}}\n{{learnlist/level4|1|Leer|Normal|Status|—|100|30|Cool|2}}\n{{learnlist/level4|1|Taunt|Dark|Status|—|100|20|Smart|0}}\n{{learnlist/level4|1|Quick Attack|Normal|Physical|40|100|30|Cool|2}}\n{{learnlist/level4|8|Quick Attack|Normal|Physical|40|100|30|Cool|2}}\n{{learnlist/level4|10|Screech|Normal|Status|—|85|40|Smart|2}}\n{{learnlist/level4|14|Faint Attack|Dark|Physical|60|—|20|Smart|2||'''}}\n{{learnlist/level4|21|Fury Swipes|Normal|Physical|18|80|15|Tough|2}}\n{{learnlist/level4|24|Nasty Plot|Dark|Status|—|—|20|Cute|0}}\n{{learnlist/level4|28|Icy Wind|Ice|Special|55|95|15|Beauty|2||'''}}\n{{learnlist/level4|35|Night Slash|Dark|Physical|70|100|15|Beauty|3||'''}}\n{{learnlist/level4|38|Fling|Dark|Physical|—|100|10|Tough|1||'''}}\n{{learnlist/level4|42|Metal Claw|Steel|Physical|50|95|35|Cool|2}}\n{{learnlist/level4|49|Dark Pulse|Dark|Special|80|100|15|Cool|2||'''}}\n{{learnlist/levelf|Weavile|dark|ice|4|4}}\n\n====By [[TM]]/[[HM]]====\n{{learnlist/tmh|Weavile|dark|ice|4|4}}\n{{learnlist/tm4|TM01|Focus Punch|Fighting|Physical|150|100|20|Tough|1}}\n{{learnlist/tm4|TM04|Calm Mind|Psychic|Status|—|—|20|Smart|0}}\n{{learnlist/tm4|TM06|Toxic|Poison|Status|—|85|10|Smart|2}}\n{{learnlist/tm4|TM07|Hail|Ice|Status|—|—|10|Beauty|2}}\n{{learnlist/tm4|TM10|Hidden Power|Normal|Special|—|100|15|Smart|1}}\n{{learnlist/tm4|TM11|Sunny Day|Fire|Status|—|—|5|Beauty|2}}\n{{learnlist/tm4|TM12|Taunt|Dark|Status|—|100|20|Smart|0}}\n{{learnlist/tm4|TM13|Ice Beam|Ice|Special|95|100|10|Beauty|2||'''}}\n{{learnlist/tm4|TM14|Blizzard|Ice|Special|120|70|5|Beauty|2||'''}}\n{{learnlist/tm4|TM15|Hyper Beam|Normal|Special|150|90|5|Cool|2}}\n{{learnlist/tm4|TM17|Protect|Normal|Status|—|—|10|Cute|0}}\n{{learnlist/tm4|TM18|Rain Dance|Water|Status|—|—|5|Tough|2}}\n{{learnlist/tm4|TM21|Frustration|Normal|Physical|—|100|20|Cute|2}}\n{{learnlist/tm4|TM23|Iron Tail|Steel|Physical|100|75|15|Cool|2}}\n{{learnlist/tm4|TM27|Return|Normal|Physical|—|100|20|Cute|2}}\n{{learnlist/tm4|TM28|Dig|Ground|Physical|80|100|10|Smart|1}}\n{{learnlist/tm4|TM30|Shadow Ball|Ghost|Special|80|100|15|Smart|2}}\n{{learnlist/tm4|TM31|Brick Break|Fighting|Physical|75|100|15|Cool|3}}\n{{learnlist/tm4|TM32|Double Team|Normal|Status|—|—|15|Cool|2}}\n{{learnlist/tm4|TM40|Aerial Ace|Flying|Physical|60|—|20|Cool|2}}\n{{learnlist/tm4|TM41|Torment|Dark|Status|—|100|15|Tough|0}}\n{{learnlist/tm4|TM42|Facade|Normal|Physical|70|100|20|Cute|2}}\n{{learnlist/tm4|TM43|Secret Power|Normal|Physical|70|100|20|Smart|2}}\n{{learnlist/tm4|TM44|Rest|Psychic|Status|—|—|10|Cute|0}}\n{{learnlist/tm4|TM45|Attract|Normal|Status|—|100|15|Cute|2}}\n{{learnlist/tm4|TM46|Thief|Dark|Physical|40|100|10|Tough|0||'''}}\n{{learnlist/tm4|TM49|Snatch|Dark|Status|—|—|10|Smart|0}}\n{{learnlist/tm4|TM52|Focus Blast|Fighting|Special|120|70|5|Cool|2}}\n{{learnlist/tm4|TM54|False Swipe|Normal|Physical|40|100|40|Cool|0}}\n{{learnlist/tm4|TM56|Fling|Dark|Physical|—|100|10|Tough|1||'''}}\n{{learnlist/tm4|TM58|Endure|Normal|Status|—|—|10|Tough|2}}\n{{learnlist/tm4|TM63|Embargo|Dark|Status|—|100|15|Cute|2}}\n{{learnlist/tm4|TM65|Shadow Claw|Ghost|Physical|70|100|15|Cute|2}}\n{{learnlist/tm4|TM66|Payback|Dark|Physical|50|100|10|Cool|1||'''}}\n{{learnlist/tm4|TM68|Giga Impact|Normal|Physical|150|90|5|Beauty|2}}\n{{learnlist/tm4|TM72|Avalanche|Ice|Physical|60|100|10|Cool|2||'''}}\n{{learnlist/tm4|TM75|Swords Dance|Normal|Status|—|—|30|Beauty|0}}\n{{learnlist/tm4|TM77|Psych Up|Normal|Status|—|—|10|Smart|0}}\n{{learnlist/tm4|TM78|Captivate|Normal|Status|—|100|20|Beauty|2}}\n{{learnlist/tm4|TM79|Dark Pulse|Dark|Special|80|100|15|Cool|2||'''}}\n{{learnlist/tm4|TM81|X-Scissor|Bug|Physical|80|100|15|Beauty|2}}\n{{learnlist/tm4|TM82|Sleep Talk|Normal|Status|—|—|10|Cute|3}}\n{{learnlist/tm4|TM83|Natural Gift|Normal|Physical|—|100|15|Cool|2}}\n{{learnlist/tm4|TM84|Poison Jab|Poison|Physical|80|100|20|Smart|2}}\n{{learnlist/tm4|TM85|Dream Eater|Psychic|Special|100|100|15|Smart|1}}\n{{learnlist/tm4|TM87|Swagger|Normal|Status|—|90|15|Cute|2}}\n{{learnlist/tm4|TM90|Substitute|Normal|Status|—|—|10|Smart|1}}\n{{learnlist/tm4|HM01|Cut|Normal|Physical|50|95|30|Cool|3}}\n{{learnlist/tm4|HM03|Surf|Water|Special|95|100|15|Beauty|2}}\n{{learnlist/tm4|HM04|Strength|Normal|Physical|80|100|15|Tough|3}}\n{{learnlist/tm4|HM05|Whirlpool|Water|Special|15|70|15|Beauty|0|||HGSS}}\n{{learnlist/tm4|HM06|Rock Smash|Fighting|Physical|40|100|15|Tough|2}}\n{{learnlist/tmf|Weavile|dark|ice|4|4}}\n\n====By {{pkmn|breeding}}====\n{{learnlist/breedh|Weavile|dark|ice|4|4}}\n{{learnlist/breed4|{{MSP/3|300|Skitty}}{{MSP/3|301|Delcatty}}{{MSP/3|431|Glameow}}{{MSP/3|432|Purugly}}|Assist|Normal|Status|—|—|20|Cute|2|||HGSS}}\n{{learnlist/breed4|{{MSP/3|019|Rattata}}{{MSP/3|020|Raticate}}{{MSP/3|023|Ekans}}{{MSP/3|024|Arbok}}{{MSP/3|052|Meowth}}{{MSP/3|053|Persian}}{{MSP/3|058|Growlithe}}{{MSP/3|059|Arcanine}}{{MSP/3|133|Eevee}}{{MSP/3|134|Vaporeon}}{{MSP/3|135|Jolteon}}{{MSP/3|136|Flareon}}{{MSP/3|196|Espeon}}{{MSP/3|197|Umbreon}}{{MSP/3|206|Dunsparce}}{{MSP/3|209|Snubbull}}{{MSP/3|210|Granbull}}{{MSP/3|228|Houndour}}{{MSP/3|229|Houndoom}}{{MSP/3|261|Poochyena}}{{MSP/3|262|Mightyena}}{{MSP/3|294|Loudred}}{{MSP/3|295|Exploud}}{{MSP/3|303|Mawile}}{{MSP/3|309|Electrike}}{{MSP/3|310|Manectric}}{{MSP/3|336|Seviper}}{{MSP/3|359|Absol}}{{MSP/3|403|Shinx}}{{MSP/3|404|Luxio}}{{MSP/3|405|Luxray}}{{MSP/3|449|Hippopotas}}{{MSP/3|450|Hippowdon}}{{MSP/3|470|Leafeon}}{{MSP/3|471|Glaceon}}|Bite|Dark|Physical|60|100|25|Tough|3||'''}}\n{{learnlist/breed4|{{MSP/3|287|Slakoth}}{{MSP/3|288|Vigoroth}}{{MSP/3|289|Slaking}}{{MSP/3|448|Lucario}}|Counter|Fighting|Physical|—|100|20|Tough|2}}\n{{learnlist/breed4|{{MSP/3|028|Sandslash}}{{MSP/3|335|Zangoose}}|Crush Claw|Normal|Physical|75|95|10|Cool|3}}\n{{learnlist/breed4|{{MSP/3|190|Aipom}}{{MSP/3|424|Ambipom}}{{MSP/3|203|Girafarig}}{{MSP/3|473|Mamoswine}}|Double Hit|Normal|Physical|35|90|10|Smart|2}}\n{{learnlist/breed4|{{MSP/3|052|Meowth}}{{MSP/3|053|Persian}}{{MSP/3|274|Nuzleaf}}{{MSP/3|275|Shiftry}}{{MSP/3|300|Skitty}}{{MSP/3|301|Delcatty}}{{MSP/3|431|Glameow}}{{MSP/3|432|Purugly}}|Fake Out|Normal|Physical|40|100|10|Cute|2}}\n{{learnlist/breed4|{{MSP/3|161|Sentret}}{{MSP/3|162|Furret}}{{MSP/3|300|Skitty}}{{MSP/3|301|Delcatty}}{{MSP/3|427|Buneary}}{{MSP/3|428|Lopunny}}{{MSP/3|448|Lucario}}|Foresight|Normal|Status|—|—|40|Smart|1}}\n{{learnlist/breed4|{{MSP/3|225|Delibird}}{{MSP/3|427|Buneary}}{{MSP/3|428|Lopunny}}|Ice Punch|Ice|Physical|75|100|15|Beauty|2|*|'''}}\n{{learnlist/breed4|{{MSP/3|086|Seel}}{{MSP/3|087|Dewgong}}{{MSP/3|215|Sneasel}}{{MSP/3|220|Swinub}}{{MSP/3|221|Piloswine}}{{MSP/3|471|Glaceon}}{{MSP/3|473|Mamoswine}}|Ice Shard|Ice|Physical|40|100|30|Beauty|2||'''}}\n{{learnlist/breed4|{{MSP/3|056|Mankey}}{{MSP/3|057|Primeape}}{{MSP/3|289|Slaking}}{{MSP/3|392|Infernape}}|Punishment|Dark|Physical|—|100|5|Smart|1||'''}}\n{{learnlist/breed4|{{MSP/3|019|Rattata}}{{MSP/3|020|Raticate}}{{MSP/3|128|Tauros}}{{MSP/3|197|Umbreon}}{{MSP/3|206|Dunsparce}}{{MSP/3|335|Zangoose}}{{MSP/3|359|Absol}}{{MSP/3|418|Buizel}}{{MSP/3|419|Floatzel}}|Pursuit|Dark|Physical|40|100|20|Smart|1||'''}}\n{{learnlist/breed4|{{MSP/3|179|Mareep}}{{MSP/3|180|Flaaffy}}{{MSP/3|181|Ampharos}}|Reflect|Psychic|Status|—|—|20|Smart|2|*}}\n{{learnlist/breed4|{{MSP/3|206|Dunsparce}}|Spite|Ghost|Status|—|100|10|Tough|2}}\n{{learnlist/breedf|Weavile|dark|ice|4|2}}\n\n====By [[Move Tutor|tutoring]]====\n{{learnlist/tutorh|Weavile|dark|ice|4|4}}\n{{learnlist/tutor4|Fury Cutter|Bug|Physical|10|95|20|Cool|2|||no|yes|yes}}\n{{learnlist/tutor4|Headbutt|Normal|Physical|70|100|15|Tough|3|||no|no|yes}}\n{{learnlist/tutor4|Ice Punch|Ice|Physical|75|100|15|Beauty|2||'''|no|yes|yes}}\n{{learnlist/tutor4|Icy Wind|Ice|Special|55|95|15|Beauty|2||'''|no|yes|yes}}\n{{learnlist/tutor4|Knock Off|Dark|Physical|20|100|20|Smart|3||'''|no|yes|yes}}\n{{learnlist/tutor4|Low Kick|Fighting|Physical|—|100|20|Tough|3|||no|no|yes}}\n{{learnlist/tutor4|Mud-Slap|Ground|Special|20|100|10|Cute|3|||no|yes|yes}}\n{{learnlist/tutor4|Snore|Normal|Special|40|100|15|Cute|3|||no|yes|yes}}\n{{learnlist/tutor4|Spite|Ghost|Status|—|100|10|Tough|2|||no|yes|yes}}\n{{learnlist/tutor4|Swift|Normal|Special|60|—|20|Cool|2|||no|yes|yes}}\n{{learnlist/tutorf|Weavile|dark|ice|4|4}}\n\n====By a prior [[Evolution]]====\n{{Learnlist/prevoh|Weavile|Dark|Ice|4|4}}\n{{Learnlist/prevo4|215|Sneasel|||||Agility|Psychic|Status|—|—|30|Cool|2}}\n{{Learnlist/prevo4|215|Sneasel|||||Beat Up|Dark|Physical|10|100|10|Smart|2}}\n{{Learnlist/prevo4|215|Sneasel|||||Ice Shard|Ice|Physical|40|100|30|Beauty|2}}\n{{Learnlist/prevo4|215|Sneasel|||||Slash|Normal|Physical|70|100|20|Cool|3}}\n{{Learnlist/prevof|Weavile|Dark|Ice|4|4}}\n\n\n====By [[transfer]] from another generation====\n=====By [[transfer]], only via prior [[Evolution]]=====\n{{learnlist/prevgenh/4prevo|Sneasel|dark|ice|2}}\n{{learnlist/prevgen4|Sneasel|2|Defense Curl|Normal|Status|—|—|40|||Cute|2|III=yes<!--tutor-->}}\n{{learnlist/prevgen4|Sneasel|2|Double-Edge|Normal|Physical|120|100|15|||Tough|0|III=yes<!--tutor-->}}\n{{learnlist/prevgen4|Sneasel|2|DynamicPunch|Fighting|Physical|100|50|5|||Cool|2|III=yes<!--tutor-->}}\n{{learnlist/prevgen4|Sneasel|2|Mimic|Normal|Status|—|—|10|||Cute|0|III=yes<!--tutor-->}}\n{{learnlist/prevgen4|Sneasel|2|Nightmare|Ghost|Status|—|100|15|||Smart|2|III=yes<!--tutor-->}}\n{{learnlist/prevgenf/4|Weavile|dark|ice|2}}\n\n====By {{pkmn2|event}}s====\n{{learnlist/eventh|Weavile|Dark|Ice|4|4}}\n{{learnlist/event4|[[2009 World Championships Weavile]]|Fake Out|Normal|Physical|40|100|10|Cute|2}}\n{{learnlist/event4|[[2009 World Championships Weavile]]|Ice Shard|Ice|Physical|40|100|30|Beauty|2||'''}}\n{{learnlist/event4|[[2009 World Championships Weavile]]|Night Slash|Dark|Physical|70|100|15|Beauty|3||'''|30}}\n{{learnlist/eventf|Weavile|Dark|Ice|4|4}}\n\n[[it:Weavile/Mosse apprese in quarta generazione]]\n[[zh:玛狃拉/第四世代招式表]]",
+ "parsetrees": {},
+ "prefix_search": {
+  "Weavile (Pokémon)": [
+   "Weavile (Pokémon)",
+   "Weavile (Pokémon)/Champions learnset",
+   "Weavile (Pokémon)/Generation IV learnset",
+   "Weavile (Pokémon)/Generation V learnset",
+   "Weavile (Pokémon)/Generation VII learnset",
+   "Weavile (Pokémon)/Generation VI learnset",
+   "Weavile (Pokémon)/Generation VIII learnset"
+  ]
+ }
+}

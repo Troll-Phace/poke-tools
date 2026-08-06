@@ -1,8 +1,9 @@
 """MCP server entrypoint and tool registration.
 
-Registered so far: the Phase 0 diagnostic (`server_info`) and the four Tier 1
-tools of PLAN.md §1.3 — `find_pokemon`, `get_learnset`, `can_learn`, `get_move`.
-The remaining seven land in later phases.
+Registered so far: the Phase 0 diagnostic (`server_info`), the eight Tier 1 tools
+of phases 1-2, and Phase 3's `wiki_lookup`. `team_check` and `export_team` land
+in Phase 4 — at which point the surface exceeds PLAN.md §0.4's ~10 budget and
+§3.2's consolidation ladder has to be climbed.
 
 House style for every tool, per PLAN.md §0.6.1 and §0.4:
 
@@ -12,8 +13,24 @@ House style for every tool, per PLAN.md §0.6.1 and §0.4:
   filter object. This targets a small open-weight model's tool-calling ceiling
   and is a hard constraint, not a style preference
 * describe and bound arguments with ``Annotated[T, Field(...)]``
+* **name an enum's valid values in its ``description`` string**, not only in the
+  schema. Qwen 3.8 got ``game`` right first try and ``methods`` wrong twice —
+  trying ``"tm"``, then ``["tm"]``, before finding ``"machine"`` — and said the
+  schema "doesn't show the enum". It does, but an *optional* enum list serialises
+  as ``anyOf: [{items: {enum: [...]}}, {type: null}]``, two levels below where the
+  model reads. ``game`` worked on the strength of being a *required top-level*
+  enum alone: its description named neither literal, which is exactly the belt it
+  would need the moment it gained a default and inherited that same nesting. So
+  every enum-constrained argument — ``game``, ``methods``, both ``method``
+  arguments, both ``type_matchup`` types — now spells its values out in prose,
+  which every model reads however deep the schema nests them, and every one of
+  those strings is generated from its ``Literal`` by :func:`_enum_values` so it
+  cannot drift. This is PLAN.md §0.4's nested-schema warning observed in production
 * mark every tool ``read_only_hint=True`` — nothing in this project mutates
-  anything
+  anything. ``open_world_hint`` is ``False`` for the Tier 1 tools, which answer
+  from a fixed local database, and **``True`` for ``wiki_lookup`` alone**: it
+  reaches a live external wiki whose content this project does not control,
+  which is exactly what that hint is for
 
 The handlers here are thin adapters. The real work lives in ``tools/*.py`` as
 plain synchronous functions, because the eval harness (PLAN.md §5) and the unit
@@ -32,7 +49,7 @@ import sqlite3
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Annotated, Literal
+from typing import Annotated, Literal, get_args
 
 from mcp.server import MCPServer
 from mcp.server.mcpserver import Context
@@ -52,6 +69,7 @@ from poke_tools.models import (
     ObtainableList,
     SpeciesCard,
     TypeMatchupCard,
+    WikiSection,
 )
 from poke_tools.tools.analysis import PokemonType
 from poke_tools.tools.analysis import type_matchup as _type_matchup
@@ -63,6 +81,8 @@ from poke_tools.tools.locations import MethodGroup
 from poke_tools.tools.locations import list_obtainable as _list_obtainable
 from poke_tools.tools.locations import where_to_find as _where_to_find
 from poke_tools.tools.moves import get_move as _get_move
+from poke_tools.tools.wiki import wiki_lookup as _wiki_lookup
+from poke_tools.wiki.client import close_shared_client
 
 
 @dataclass
@@ -91,6 +111,10 @@ async def lifespan(_server: MCPServer) -> AsyncIterator[PokedexContext]:
         yield PokedexContext(connection=connection)
     finally:
         db.close_shared_connection()
+        # Tier 2 holds its own resources: an HTTP connection pool and a
+        # read-write handle on the wiki cache, both opened lazily on the first
+        # `wiki_lookup` and neither owned by the pokédex connection above.
+        close_shared_client()
 
 
 mcp = MCPServer(
@@ -124,13 +148,34 @@ def _connection(ctx: Context) -> sqlite3.Connection:
 # slightly different ways to the model.
 # ---------------------------------------------------------------------------
 
+
+def _enum_values(alias: object) -> str:
+    """A ``Literal`` alias's values, spelled for an argument description.
+
+    Every enum-constrained argument's description is built through this rather
+    than written out by hand, so the prose the model reads cannot drift from the
+    schema it describes. The hand-written lists this replaced were accurate when
+    written and had nothing keeping them that way.
+    """
+    return ", ".join(f"{value!r}" for value in get_args(alias))
+
+
+#: The two supported games (:data:`games.Game`), the four learn methods
+#: (:data:`models.LearnMethod`), the six encounter-method groups
+#: (:data:`locations.MethodGroup`) and the eighteen types
+#: (:data:`analysis.PokemonType`) — each generated from its own ``Literal``.
+_GAME_VALUES = _enum_values(Game)
+_LEARN_METHOD_VALUES = _enum_values(LearnMethod)
+_METHOD_GROUP_VALUES = _enum_values(MethodGroup)
+_TYPE_VALUES = _enum_values(PokemonType)
+
 GameArg = Annotated[
     Game,
     Field(
         description=(
-            "Which game to answer for. Only HeartGold/SoulSilver and Emerald are "
-            "supported; anything else is rejected rather than answered from "
-            "unverified data."
+            f"Which game to answer for. Valid values, exactly as spelled: "
+            f"{_GAME_VALUES}. Only HeartGold/SoulSilver and Emerald are supported; "
+            "anything else is rejected rather than answered from unverified data."
         )
     ),
 ]
@@ -238,7 +283,13 @@ async def get_learnset(
     game: GameArg,
     methods: Annotated[
         list[LearnMethod] | None,
-        Field(description="Learn methods to include. Omit for all four."),
+        Field(
+            description=(
+                f"Learn methods to include. Valid values, exactly as spelled: "
+                f"{_LEARN_METHOD_VALUES}. TMs and HMs are 'machine' — 'tm' is not "
+                "accepted. Omit the argument entirely for all four."
+            )
+        ),
     ] = None,
     offset: OffsetArg = 0,
     limit: LimitArg = db.MAX_ROWS,
@@ -317,7 +368,8 @@ async def where_to_find(
         MethodGroup,
         Field(
             description=(
-                "Restrict to one way of encountering. 'any' (the default) returns every "
+                f"Restrict to one way of encountering. Valid values, exactly as "
+                f"spelled: {_METHOD_GROUP_VALUES}. 'any' (the default) returns every "
                 "method, including static, gift and in-game-trade entries."
             )
         ),
@@ -360,7 +412,8 @@ async def list_obtainable(
         MethodGroup,
         Field(
             description=(
-                "Restrict to one way of encountering. 'any' includes gift, static and "
+                f"Restrict to one way of encountering. Valid values, exactly as "
+                f"spelled: {_METHOD_GROUP_VALUES}. 'any' includes gift, static and "
                 "in-game-trade entries, which carry fixed low levels and so sort early."
             )
         ),
@@ -407,15 +460,63 @@ async def get_item(
 )
 async def type_matchup(
     ctx: Context,
-    type1: Annotated[PokemonType, Field(description="First type, e.g. 'water'.")],
+    type1: Annotated[PokemonType, Field(description=f"First type. One of: {_TYPE_VALUES}.")],
     game: GameArg,
     type2: Annotated[
         PokemonType | None,
-        Field(description="Second type for a dual-typed Pokémon. Omit for a single type."),
+        Field(
+            description=(
+                f"Second type for a dual-typed Pokémon. One of: {_TYPE_VALUES}. "
+                "Omit the argument entirely for a single-typed Pokémon."
+            )
+        ),
     ] = None,
 ) -> TypeMatchupCard:
     """Generation-correct type chart for one or two types."""
     return _type_matchup(type1, game, type2=type2, conn=_connection(ctx))
+
+
+@mcp.tool(
+    title="Wiki lookup",
+    description=(
+        "Read one named section of one Bulbapedia page, parsed into structured rows — "
+        "**the only tool here that reaches the live network, and a fallback rather than a "
+        "first stop.** Use it for the two questions the local pokédex genuinely cannot "
+        "answer: where an item is found (there is no item-location data in this server's "
+        "source at all) and what a move tutor charges and where they stand. Everything "
+        "else — learnsets, TM numbers, encounters, type charts — is faster and more "
+        "reliable from the other tools. Sections are matched by name, so pass the heading "
+        "as it appears on the page ('Acquisition', 'HeartGold and SoulSilver'); if the "
+        "name is wrong the error lists the real ones. Old-generation learnsets live on "
+        "subpages, e.g. page='Garchomp (Pokémon)/Generation IV learnset'. Results are "
+        "capped — check `total_count` and page with `next_offset`."
+    ),
+    annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True),
+)
+async def wiki_lookup(
+    page: Annotated[
+        str,
+        Field(
+            description=(
+                "Bulbapedia page title, e.g. 'Leftovers' or 'Move Tutor'. Redirects are "
+                "followed; a missing page comes back with suggestions."
+            )
+        ),
+    ],
+    section_name: Annotated[
+        str,
+        Field(
+            description=(
+                "Section heading to read, e.g. 'Acquisition'. Matched by name, never by "
+                "position — the same heading sits at a different index on every page."
+            )
+        ),
+    ],
+    offset: OffsetArg = 0,
+    limit: LimitArg = db.MAX_ROWS,
+) -> WikiSection:
+    """One named Bulbapedia section, parsed to rows."""
+    return _wiki_lookup(page, section_name, offset=offset, limit=limit)
 
 
 def main() -> None:

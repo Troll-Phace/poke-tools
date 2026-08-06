@@ -1,0 +1,731 @@
+{
+ "requested": "Pikachu (Pokémon)",
+ "title": "Pikachu (Pokémon)",
+ "revid": 4606512,
+ "size": 213699,
+ "sections": [
+  {
+   "index": "1",
+   "line": "Biology",
+   "level": 2
+  },
+  {
+   "index": "2",
+   "line": "Forms",
+   "level": 3
+  },
+  {
+   "index": "3",
+   "line": "Cosplay Pikachu",
+   "level": 4
+  },
+  {
+   "index": "4",
+   "line": "Pikachu in a cap",
+   "level": 4
+  },
+  {
+   "index": "5",
+   "line": "Gigantamax Pikachu",
+   "level": 4
+  },
+  {
+   "index": "6",
+   "line": "Pale Pikachu",
+   "level": 4
+  },
+  {
+   "index": "7",
+   "line": "Partner Pikachu",
+   "level": 4
+  },
+  {
+   "index": "8",
+   "line": "Evolution",
+   "level": 3
+  },
+  {
+   "index": "9",
+   "line": "Game data",
+   "level": 2
+  },
+  {
+   "index": "10",
+   "line": "As the player",
+   "level": 3
+  },
+  {
+   "index": "11",
+   "line": "NPC appearances",
+   "level": 3
+  },
+  {
+   "index": "12",
+   "line": "In the core series",
+   "level": 4
+  },
+  {
+   "index": "13",
+   "line": "In the spin-off games",
+   "level": 4
+  },
+  {
+   "index": "14",
+   "line": "Pokédex entries",
+   "level": 3
+  },
+  {
+   "index": "15",
+   "line": "Game locations",
+   "level": 3
+  },
+  {
+   "index": "16",
+   "line": "In side games",
+   "level": 4
+  },
+  {
+   "index": "17",
+   "line": "In events",
+   "level": 4
+  },
+  {
+   "index": "18",
+   "line": "Pikachu",
+   "level": 5
+  },
+  {
+   "index": "19",
+   "line": "Original Cap Pikachu",
+   "level": 5
+  },
+  {
+   "index": "20",
+   "line": "Hoenn Cap Pikachu",
+   "level": 5
+  },
+  {
+   "index": "21",
+   "line": "Sinnoh Cap Pikachu",
+   "level": 5
+  },
+  {
+   "index": "22",
+   "line": "Unova Cap Pikachu",
+   "level": 5
+  },
+  {
+   "index": "23",
+   "line": "Kalos Cap Pikachu",
+   "level": 5
+  },
+  {
+   "index": "24",
+   "line": "Alola Cap Pikachu",
+   "level": 5
+  },
+  {
+   "index": "25",
+   "line": "Partner Cap Pikachu",
+   "level": 5
+  },
+  {
+   "index": "26",
+   "line": "World Cap Pikachu",
+   "level": 5
+  },
+  {
+   "index": "27",
+   "line": "In-game events",
+   "level": 4
+  },
+  {
+   "index": "28",
+   "line": "Pikachu",
+   "level": 5
+  },
+  {
+   "index": "29",
+   "line": "Partner Cap Pikachu",
+   "level": 5
+  },
+  {
+   "index": "30",
+   "line": "Wild Area News",
+   "level": 4
+  },
+  {
+   "index": "31",
+   "line": "Poké Portal News",
+   "level": 4
+  },
+  {
+   "index": "32",
+   "line": "Pokémon Global Link promotions",
+   "level": 4
+  },
+  {
+   "index": "33",
+   "line": "Held items",
+   "level": 3
+  },
+  {
+   "index": "34",
+   "line": "Stats",
+   "level": 3
+  },
+  {
+   "index": "35",
+   "line": "Base stats",
+   "level": 4
+  },
+  {
+   "index": "36",
+   "line": "Generations I-V",
+   "level": 6
+  },
+  {
+   "index": "37",
+   "line": "Generation VI onward",
+   "level": 6
+  },
+  {
+   "index": "38",
+   "line": "Partner Pikachu",
+   "level": 5
+  },
+  {
+   "index": "39",
+   "line": "Pokéathlon stats",
+   "level": 4
+  },
+  {
+   "index": "40",
+   "line": "Type effectiveness",
+   "level": 3
+  },
+  {
+   "index": "41",
+   "line": "Learnset",
+   "level": 3
+  },
+  {
+   "index": "42",
+   "line": "By leveling up",
+   "level": 4
+  },
+  {
+   "index": "43",
+   "line": "By TM",
+   "level": 4
+  },
+  {
+   "index": "44",
+   "line": "By breeding",
+   "level": 4
+  },
+  {
+   "index": "45",
+   "line": "By a prior Evolution",
+   "level": 4
+  },
+  {
+   "index": "46",
+   "line": "By events",
+   "level": 4
+  },
+  {
+   "index": "47",
+   "line": "TCG-only moves",
+   "level": 4
+  },
+  {
+   "index": "48",
+   "line": "Animated series-only moves",
+   "level": 4
+  },
+  {
+   "index": "49",
+   "line": "Side game data",
+   "level": 3
+  },
+  {
+   "index": "50",
+   "line": "Pikachu",
+   "level": 4
+  },
+  {
+   "index": "51",
+   "line": "Pikachu Libre",
+   "level": 4
+  },
+  {
+   "index": "52",
+   "line": "Pikachu Pop Star",
+   "level": 4
+  },
+  {
+   "index": "53",
+   "line": "Pikachu Rock Star",
+   "level": 4
+  },
+  {
+   "index": "54",
+   "line": "Flying Pikachu",
+   "level": 4
+  },
+  {
+   "index": "55",
+   "line": "Shaymin scarf Pikachu",
+   "level": 4
+  },
+  {
+   "index": "56",
+   "line": "Pikachu, Ph. D",
+   "level": 4
+  },
+  {
+   "index": "57",
+   "line": "Captain Pikachu",
+   "level": 4
+  },
+  {
+   "index": "58",
+   "line": "Gigantamax Pikachu",
+   "level": 4
+  },
+  {
+   "index": "59",
+   "line": "Form data",
+   "level": 3
+  },
+  {
+   "index": "60",
+   "line": "Cosplay Pikachu",
+   "level": 4
+  },
+  {
+   "index": "61",
+   "line": "Pikachu in a cap",
+   "level": 4
+  },
+  {
+   "index": "62",
+   "line": "Gigantamax",
+   "level": 4
+  },
+  {
+   "index": "63",
+   "line": "Pale Pikachu",
+   "level": 4
+  },
+  {
+   "index": "64",
+   "line": "Partner Pikachu",
+   "level": 4
+  },
+  {
+   "index": "65",
+   "line": "Evolution data",
+   "level": 3
+  },
+  {
+   "index": "66",
+   "line": "Sprites",
+   "level": 3
+  },
+  {
+   "index": "67",
+   "line": "Other sprites",
+   "level": 4
+  },
+  {
+   "index": "68",
+   "line": "In animation",
+   "level": 2
+  },
+  {
+   "index": "69",
+   "line": "Main series",
+   "level": 3
+  },
+  {
+   "index": "70",
+   "line": "Major appearances",
+   "level": 4
+  },
+  {
+   "index": "71",
+   "line": "Ash's Pikachu",
+   "level": 5
+  },
+  {
+   "index": "72",
+   "line": "Pikachutwo",
+   "level": 5
+  },
+  {
+   "index": "73",
+   "line": "Puka",
+   "level": 5
+  },
+  {
+   "index": "74",
+   "line": "Sparky",
+   "level": 5
+  },
+  {
+   "index": "75",
+   "line": "Ashachu",
+   "level": 5
+  },
+  {
+   "index": "76",
+   "line": "Cosplay Pikachu",
+   "level": 5
+  },
+  {
+   "index": "77",
+   "line": "Ash's Pikachu (M20)",
+   "level": 5
+  },
+  {
+   "index": "78",
+   "line": "Goh's Pikachu",
+   "level": 5
+  },
+  {
+   "index": "79",
+   "line": "Captain Pikachu",
+   "level": 5
+  },
+  {
+   "index": "80",
+   "line": "Other",
+   "level": 5
+  },
+  {
+   "index": "81",
+   "line": "Minor appearances",
+   "level": 4
+  },
+  {
+   "index": "82",
+   "line": "Pokédex entries",
+   "level": 4
+  },
+  {
+   "index": "83",
+   "line": "Pokémon Mystery Dungeon Animated Shorts",
+   "level": 3
+  },
+  {
+   "index": "84",
+   "line": "Pokémon Origins",
+   "level": 3
+  },
+  {
+   "index": "85",
+   "line": "Red's Pikachu",
+   "level": 4
+  },
+  {
+   "index": "86",
+   "line": "Other",
+   "level": 4
+  },
+  {
+   "index": "87",
+   "line": "Pokémon Generations",
+   "level": 3
+  },
+  {
+   "index": "88",
+   "line": "Red's Pikachu",
+   "level": 4
+  },
+  {
+   "index": "89",
+   "line": "Pokémon Masters Animated Trailer",
+   "level": 3
+  },
+  {
+   "index": "90",
+   "line": "Pokémon: Twilight Wings",
+   "level": 3
+  },
+  {
+   "index": "91",
+   "line": "POKÉTOON",
+   "level": 3
+  },
+  {
+   "index": "92",
+   "line": "GOTCHA!",
+   "level": 3
+  },
+  {
+   "index": "93",
+   "line": "Pokémon Evolutions",
+   "level": 3
+  },
+  {
+   "index": "94",
+   "line": "Bidoof's Big Stand",
+   "level": 3
+  },
+  {
+   "index": "95",
+   "line": "A Ripple in Time",
+   "level": 3
+  },
+  {
+   "index": "96",
+   "line": "Pokémon Concierge",
+   "level": 3
+  },
+  {
+   "index": "97",
+   "line": "The Journey of One Dream",
+   "level": 3
+  },
+  {
+   "index": "98",
+   "line": "Biri-Biri",
+   "level": 3
+  },
+  {
+   "index": "99",
+   "line": "In the manga",
+   "level": 2
+  },
+  {
+   "index": "100",
+   "line": "Pokémon Adventures",
+   "level": 3
+  },
+  {
+   "index": "101",
+   "line": "Major appearances",
+   "level": 4
+  },
+  {
+   "index": "102",
+   "line": "Pika",
+   "level": 5
+  },
+  {
+   "index": "103",
+   "line": "Chuchu",
+   "level": 5
+  },
+  {
+   "index": "104",
+   "line": "Cosplay Pikachu",
+   "level": 5
+  },
+  {
+   "index": "105",
+   "line": "Other",
+   "level": 5
+  },
+  {
+   "index": "106",
+   "line": "Minor appearances",
+   "level": 4
+  },
+  {
+   "index": "107",
+   "line": "Pokédex entries",
+   "level": 4
+  },
+  {
+   "index": "108",
+   "line": "Pokémon Pocket Monsters",
+   "level": 3
+  },
+  {
+   "index": "109",
+   "line": "The Electric Tale of Pikachu",
+   "level": 3
+  },
+  {
+   "index": "110",
+   "line": "Pokédex entries",
+   "level": 4
+  },
+  {
+   "index": "111",
+   "line": "Magical Pokémon Journey and Pokémon Chamo-Chamo ☆ Pretty ♪",
+   "level": 3
+  },
+  {
+   "index": "112",
+   "line": "Pokémon Zensho",
+   "level": 3
+  },
+  {
+   "index": "113",
+   "line": "Pokémon: Yeah! I Got Pokémon!",
+   "level": 3
+  },
+  {
+   "index": "114",
+   "line": "How I Became a Pokémon Card",
+   "level": 3
+  },
+  {
+   "index": "115",
+   "line": "Pokémon Gold &amp; Silver: The Golden Boys",
+   "level": 3
+  },
+  {
+   "index": "116",
+   "line": "Pokémon Newspaper Strip",
+   "level": 3
+  },
+  {
+   "index": "117",
+   "line": "Ash &amp; Pikachu",
+   "level": 3
+  },
+  {
+   "index": "118",
+   "line": "Pokémon Battle Frontier",
+   "level": 3
+  },
+  {
+   "index": "119",
+   "line": "Pocket Monsters Diamond &amp; Pearl",
+   "level": 3
+  },
+  {
+   "index": "120",
+   "line": "Pokémon Battrio: Aim to be Battrio Master!",
+   "level": 3
+  },
+  {
+   "index": "121",
+   "line": "Pocket Monsters HeartGold &amp; SoulSilver Go! Go! Pokéathlon",
+   "level": 3
+  },
+  {
+   "index": "122",
+   "line": "Pocket Monsters HGSS Jō's Big Adventure",
+   "level": 3
+  },
+  {
+   "index": "123",
+   "line": "Pokémon + Nobunaga's Ambition ~ Ranse's Color Picture Scroll ~",
+   "level": 3
+  },
+  {
+   "index": "124",
+   "line": "Pokémon Horizon",
+   "level": 3
+  },
+  {
+   "index": "125",
+   "line": "Pokémon Journeys",
+   "level": 3
+  },
+  {
+   "index": "126",
+   "line": "In the TCG",
+   "level": 2
+  },
+  {
+   "index": "127",
+   "line": "In the TFG",
+   "level": 2
+  },
+  {
+   "index": "128",
+   "line": "Other appearances",
+   "level": 2
+  },
+  {
+   "index": "129",
+   "line": "Pokkén Tournament",
+   "level": 3
+  },
+  {
+   "index": "130",
+   "line": "Super Smash Bros. series",
+   "level": 3
+  },
+  {
+   "index": "131",
+   "line": "Detective Pikachu series",
+   "level": 3
+  },
+  {
+   "index": "132",
+   "line": "Pokémon UNITE",
+   "level": 3
+  },
+  {
+   "index": "133",
+   "line": "The Strength of the Lightning",
+   "level": 3
+  },
+  {
+   "index": "134",
+   "line": "Celestial",
+   "level": 3
+  },
+  {
+   "index": "135",
+   "line": "Merchandise",
+   "level": 2
+  },
+  {
+   "index": "136",
+   "line": "Trivia",
+   "level": 2
+  },
+  {
+   "index": "137",
+   "line": "Cultural impact",
+   "level": 3
+  },
+  {
+   "index": "138",
+   "line": "Concept and development",
+   "level": 3
+  },
+  {
+   "index": "139",
+   "line": "Origin",
+   "level": 3
+  },
+  {
+   "index": "140",
+   "line": "Name origin",
+   "level": 4
+  },
+  {
+   "index": "141",
+   "line": "In other languages",
+   "level": 2
+  },
+  {
+   "index": "142",
+   "line": "See also",
+   "level": 2
+  },
+  {
+   "index": "143",
+   "line": "References",
+   "level": 2
+  },
+  {
+   "index": "144",
+   "line": "External links",
+   "level": 2
+  }
+ ],
+ "raw": null,
+ "parsetrees": {},
+ "prefix_search": {}
+}

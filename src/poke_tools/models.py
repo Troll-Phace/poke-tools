@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from typing import Literal, get_origin
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 from poke_tools.db import MAX_ROWS
 
@@ -669,4 +669,166 @@ class TypeMatchupCard(SourcedResult):
     defending_resists: list[str] = Field(description="Hits this typing for 0.5x.")
     defending_quad_resists: list[str] = Field(description="Hits this typing for 0.25x.")
     defending_immune: list[str] = Field(description="Cannot damage this typing at all.")
+    notes: list[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# wiki_lookup — Tier 2
+# ---------------------------------------------------------------------------
+
+
+class WikiRow(BaseModel):
+    """One parsed row from a Bulbapedia section.
+
+    **Deliberately one flat model rather than a discriminated union of four.**
+    PLAN.md §0.4 fixes the surface at flat, enum-constrained arguments and simple
+    structured output because the target is a small open-weight model's
+    tool-calling ceiling; an ``anyOf`` of four row shapes is precisely the nested
+    schema that budget rules out. :attr:`WikiSection.row_kind` names which shape
+    a response actually carries, once, for the whole page.
+
+    Every field except that one is optional, and **empty fields are omitted from
+    the serialised output rather than sent as nulls** (see
+    :meth:`_drop_empty_fields`). That is byte discipline, not tidiness: nine
+    ``"field": null`` pairs across a 40-row page cost roughly 2.5 KB against
+    PLAN.md §2's 6 KB budget for the whole phase-3 response.
+
+    Names here are Bulbapedia's *display* spellings — ``ThunderPunch``,
+    ``Mud-Slap`` — not PokéAPI identifiers. They round-trip into the Tier 1 tools
+    anyway: ``db.resolve_species`` and ``db.resolve_move_id`` both try a
+    separator-free form, so ``ThunderPunch`` resolves to ``thunder-punch``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    game: str | None = Field(
+        default=None,
+        description=(
+            "Which game(s) this row is about, expanded from the wiki's abbreviation "
+            "('HGSS' → 'HeartGold and SoulSilver'). Only acquisition tables carry it."
+        ),
+    )
+    move: str | None = Field(default=None, description="Move name, for tutor and learnset rows.")
+    type: str | None = None
+    damage_class: str | None = Field(default=None, description="'physical', 'special' or 'status'.")
+    power: int | None = Field(default=None, description="Null for status moves and unknowns.")
+    level: int | None = Field(default=None, description="Level learned; level-up learnset rows.")
+    tm: str | None = Field(default=None, description="TM/HM label, e.g. 'TM02'.")
+    method: str | None = Field(
+        default=None,
+        description=(
+            "How the move is learned, in the same vocabulary get_learnset uses: "
+            "'level-up', 'machine', 'egg', 'tutor', or 'prevo' for moves carried up "
+            "from a pre-evolution (which has no Tier 1 counterpart)."
+        ),
+    )
+    cost: str | None = Field(
+        default=None,
+        description=(
+            "What a tutor charges, as written: '48 BP', '16 BP', or 'free'. This and "
+            "`location` are the reason the Bulbapedia tier exists — PLAN.md §0.2 lists "
+            "tutor costs and NPC locations as absent from PokéAPI entirely."
+        ),
+    )
+    location: str | None = Field(
+        default=None,
+        description=(
+            "Where: the tutor's town for a tutor row, or the buy/pick-up column for an "
+            "acquisition row."
+        ),
+    )
+    group: str | None = Field(
+        default=None,
+        description="Which tutor or table this row came from, e.g. 'Top left', 'Free Move Tutors'.",
+    )
+    detail: str | None = Field(
+        default=None,
+        description=(
+            "Everything that is prose rather than a field: the 'found/other' column of "
+            "an acquisition table, the parent species of an egg move, or the whole line "
+            "when `row_kind` is 'text'. Always rendered plain text — never wikitext."
+        ),
+    )
+
+    @model_serializer(mode="plain")
+    def _drop_empty_fields(self) -> dict[str, object]:
+        """Serialise only the fields that carry a value."""
+        return {
+            name: value
+            for name, value in ((n, getattr(self, n)) for n in type(self).model_fields)
+            if value is not None
+        }
+
+
+class WikiSection(PagedResult):
+    """The `wiki_lookup` response — one named Bulbapedia section, parsed.
+
+    **This is a `PagedResult` on purpose.** A section is not always one page of
+    answer: "Move Tutor" § "HeartGold and SoulSilver" holds 56 tutor rows against
+    a 40-row cap, so the page and the answer are genuinely different sizes and
+    ``total_count`` has to say so. Reporting only the rows returned would let a
+    truncated tutor list read as the complete one — the same failure a truncated
+    learnset would be.
+
+    ``source`` is always ``bulbapedia``; this is the first tool to use that value.
+    Bulbapedia is CC BY-NC-SA 2.5 (PLAN.md §4), which requires attribution, so
+    :attr:`url` and :attr:`license` travel with the data rather than living in a
+    docstring nobody ships.
+    """
+
+    page: str = Field(description="Canonical page title, after redirects were followed.")
+    section: str = Field(description="The section's own heading, as Bulbapedia spells it.")
+    section_index: str = Field(
+        description=(
+            "The index `prop=sections` returned for this section on this revision. "
+            "Reported because it is *not* stable — 'Learnset' is index 26 on Garchomp, "
+            "41 on Pikachu and 13 on Ting-Lu — so it is resolved by name every time and "
+            "must never be reused as a constant. Empty when the page was small enough "
+            "to fetch whole, where no index is involved at all."
+        )
+    )
+    revision_id: int = Field(
+        description="Page revision these rows were parsed from. Cache keys include it."
+    )
+    row_kind: Literal["item_availability", "tutor", "learnset", "text"] = Field(
+        description=(
+            "What the rows are, which decides which fields they carry: "
+            "'item_availability' (game/location/detail), 'tutor' (move/cost/location), "
+            "'learnset' (move/method/level/tm), or 'text' — the honest fallback for a "
+            "section built from prose or from a table with no recognised template. "
+            "'text' rows are still fully rendered plain text."
+        )
+    )
+    rows: list[WikiRow]
+    fetch_mode: Literal["raw", "section"] = Field(
+        description=(
+            "Which branch fetched this: 'raw' for a page under 15 KB pulled whole, "
+            "'section' for a larger page fetched one section at a time. PLAN.md §0.1 "
+            "measured the crossover; below it the JSON envelope costs more than the page."
+        )
+    )
+    fetched_bytes: int = Field(
+        ge=0,
+        description="Markup bytes pulled over the wire. 0 on a cache hit, which fetches nothing.",
+    )
+    cached: bool = Field(
+        description="True when this answer came from the local cache and no request was made."
+    )
+    confidence: Confidence = Field(
+        description=(
+            "'high' when a recognised template family parsed into structured rows; "
+            "'partial' when the section resolved but fell back to plain-text rows, or "
+            "the name matched more than one section; 'low' when the section resolved but "
+            "yielded nothing at all."
+        )
+    )
+    coverage_note: str | None = Field(
+        default=None,
+        description=(
+            "Why this answer may be incomplete, or why it is empty. Null only when "
+            "`confidence` is 'high' and rows were found."
+        ),
+    )
+    url: str = Field(description="Source page, for the attribution the licence requires.")
+    license: str = Field(description="Licence the content is under (PLAN.md §4).")
     notes: list[str] = Field(default_factory=list)

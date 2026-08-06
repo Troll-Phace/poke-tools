@@ -1,0 +1,178 @@
+{
+ "requested": "Battle Frontier (Generation III)",
+ "title": "Battle Frontier (Generation III)",
+ "revid": 4601380,
+ "size": 28065,
+ "sections": [
+  {
+   "index": "1",
+   "line": "Overview",
+   "level": 2
+  },
+  {
+   "index": "2",
+   "line": "Restrictions",
+   "level": 3
+  },
+  {
+   "index": "3",
+   "line": "Trainers",
+   "level": 3
+  },
+  {
+   "index": "4",
+   "line": "Items",
+   "level": 2
+  },
+  {
+   "index": "5",
+   "line": "Pokémon",
+   "level": 2
+  },
+  {
+   "index": "6",
+   "line": "Special encounters",
+   "level": 2
+  },
+  {
+   "index": "7",
+   "line": "Facilities",
+   "level": 2
+  },
+  {
+   "index": "8",
+   "line": "Other points of interest",
+   "level": 2
+  },
+  {
+   "index": "9",
+   "line": "Artisan Cave",
+   "level": 3
+  },
+  {
+   "index": "10",
+   "line": "House",
+   "level": 3
+  },
+  {
+   "index": "11",
+   "line": "Ranking Hall",
+   "level": 3
+  },
+  {
+   "index": "12",
+   "line": "Sudowoodo",
+   "level": 3
+  },
+  {
+   "index": "13",
+   "line": "Betting man",
+   "level": 3
+  },
+  {
+   "index": "14",
+   "line": "Stats judge",
+   "level": 3
+  },
+  {
+   "index": "15",
+   "line": "Move Tutors",
+   "level": 3
+  },
+  {
+   "index": "16",
+   "line": "List of Move Tutor moves",
+   "level": 4
+  },
+  {
+   "index": "17",
+   "line": "Battle Point Exchange Service Corner",
+   "level": 3
+  },
+  {
+   "index": "18",
+   "line": "Poké Mart",
+   "level": 3
+  },
+  {
+   "index": "19",
+   "line": "In animation",
+   "level": 2
+  },
+  {
+   "index": "20",
+   "line": "<i>Pokémon the Series</i>",
+   "level": 3
+  },
+  {
+   "index": "21",
+   "line": "<i>Pokémon the Series: Ruby and Sapphire</i>",
+   "level": 4
+  },
+  {
+   "index": "22",
+   "line": "<i>Pokémon Journeys: The Series</i>",
+   "level": 4
+  },
+  {
+   "index": "23",
+   "line": "In the manga",
+   "level": 2
+  },
+  {
+   "index": "24",
+   "line": "Ash &amp; Pikachu",
+   "level": 3
+  },
+  {
+   "index": "25",
+   "line": "Pokémon Adventures",
+   "level": 3
+  },
+  {
+   "index": "26",
+   "line": "<i>Emerald</i> arc",
+   "level": 4
+  },
+  {
+   "index": "27",
+   "line": "Pokémon Battle Frontier",
+   "level": 3
+  },
+  {
+   "index": "28",
+   "line": "Pokémon Pocket Monsters",
+   "level": 3
+  },
+  {
+   "index": "29",
+   "line": "In the TCG",
+   "level": 2
+  },
+  {
+   "index": "30",
+   "line": "Trivia",
+   "level": 2
+  },
+  {
+   "index": "31",
+   "line": "In other languages",
+   "level": 2
+  },
+  {
+   "index": "32",
+   "line": "References",
+   "level": 2
+  },
+  {
+   "index": "33",
+   "line": "Related articles",
+   "level": 2
+  }
+ ],
+ "raw": null,
+ "parsetrees": {
+  "7": "<root><h level=\"2\" i=\"1\">==Facilities==</h>\n{| style=&quot;margin:auto; text-align:center; background:#<template><title>hoenn color dark</title></template>; <template><title>roundy</title></template>; border: 4px solid #<template><title>hoenn color</title></template>&quot; colspan=&quot;4&quot; cellspacing=&quot;1&quot; cellpadding=&quot;2&quot;\n! style=&quot;background:#<template><title>hoenn color light</title></template>; <template><title>roundytl</title><part><name index=\"1\"/><value>5px</value></part></template>&quot; | <template><title>color</title><part><name index=\"1\"/><value>000</value></part><part><name index=\"2\"/><value>Facility</value></part></template>\n! style=&quot;background:#<template><title>hoenn color light</title></template>&quot; | <template><title>color2</title><part><name index=\"1\"/><value>000</value></part><part><name index=\"2\"/><value>Frontier Brain</value></part></template>\n! colspan=&quot;2&quot; style=&quot;background:#<template><title>hoenn color light</title></template>; <template><title>roundytr</title><part><name index=\"1\"/><value>5px</value></part></template>&quot; | <template><title>color2</title><part><name index=\"1\"/><value>000</value></part><part><name index=\"2\"/><value>Symbol</value></part><part><name index=\"3\"/><value>Symbols</value></part></template>\n|- style=&quot;background:#FFF&quot;\n| [[File:Battle Factory E.png|x120px]]&lt;br&gt;[[Battle Factory (Generation III)|Battle Factory]]\n| [[File:Spr E Noland.png]]&lt;br&gt;[[Factory Head (Trainer class)|Factory Head]] [[Noland]]\n| [[File:Knowledgesymbolsilver.png|50px]]&lt;br&gt;Silver Knowledge Symbol\n| [[File:Knowledgesymbol.png|50px]]&lt;br&gt;Gold Knowledge Symbol\n|- style=&quot;background:#FFF&quot;\n| [[File:Battle Arena E.png|x120px]]&lt;br&gt;[[Battle Arena]]\n| [[File:Spr E Greta.png]]&lt;br&gt;[[Greta|Arena Tycoon Greta]]\n| [[File:Gutssymbolsilver.png|50px]]&lt;br&gt;Silver Guts Symbol\n| [[File:Gutssymbol.png|50px]]&lt;br&gt;Gold Guts Symbol\n|- style=&quot;background:#FFF&quot;\n| [[File:Battle Dome E.png|x120px]]&lt;br&gt;[[Battle Dome]]\n| [[File:Spr E Tucker.png]]&lt;br&gt;[[Tucker|Dome Ace Tucker]]\n| [[File:Tacticssymbolsilver.png|50px]]&lt;br&gt;Silver Tactics Symbol\n| [[File:Tacticssymbol.png|50px]]&lt;br&gt;Gold Tactics Symbol\n|- style=&quot;background:#FFF&quot;\n| [[File:Battle Pike E.png|x120px]]&lt;br&gt;[[Battle Pike]]\n| [[File:Spr E Lucy.png]]&lt;br&gt;[[Lucy|Pike Queen Lucy]]\n| [[File:Lucksymbolsilver.png|50px]]&lt;br&gt;Silver Luck Symbol\n| [[File:Lucksymbol.png|50px]]&lt;br&gt;Gold Luck Symbol\n|- style=&quot;background:#FFF&quot;\n| [[File:Battle Palace E.png|x120px]]&lt;br&gt;[[Battle Palace]]\n| [[File:Spr E Spenser.png]]&lt;br&gt;[[Spenser|Palace Maven Spenser]]\n| [[File:Spiritssymbolsilver.png|50px]]&lt;br&gt;Silver Spirits Symbol\n| [[File:Spiritssymbol.png|50px]]&lt;br&gt;Gold Spirits Symbol\n|- style=&quot;background:#FFF&quot;\n| [[File:Battle Pyramid E.png|x120px]]&lt;br&gt;[[Battle Pyramid]]\n| [[File:Spr E Brandon.png]]&lt;br&gt;[[Brandon|Pyramid King Brandon]]\n| [[File:Bravesymbolsilver.png|50px]]&lt;br&gt;Silver Brave Symbol\n| [[File:Bravesymbol.png|50px]]&lt;br&gt;Gold Brave Symbol\n|- \n| style=&quot;background:#FFF; <template><title>roundybl</title><part><name index=\"1\"/><value>5px</value></part></template>&quot; | [[File:Battle Tower E.png|x120px]]&lt;br&gt;<template><title>Gdis</title><part><name index=\"1\"/><value>Battle Tower</value></part><part><name index=\"2\"/><value>III</value></part></template>\n| style=&quot;background:#FFF&quot; | [[File:Spr E Anabel.png]]&lt;br&gt;[[Tower Tycoon (Trainer class)|Salon Maiden]] [[Anabel]]\n| style=&quot;background:#FFF&quot; | [[File:Abilitysymbolsilver.png|50px]]&lt;br&gt;Silver Ability Symbol\n| style=&quot;background:#FFF; <template><title>roundybr</title><part><name index=\"1\"/><value>5px</value></part></template>;&quot; | [[File:Abilitysymbol.png|50px]]&lt;br&gt;Gold Ability Symbol\n|}&lt;br clear=&quot;all&quot;&gt;</root>"
+ },
+ "prefix_search": {}
+}

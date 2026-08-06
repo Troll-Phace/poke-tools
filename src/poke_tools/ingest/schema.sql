@@ -877,15 +877,41 @@ CREATE TABLE showdown_learnset (
 -- boundary, and caching it here would put that violation one careless SELECT
 -- away.
 --
--- `expires_at` NULL means "never" — section *indexes* are cached indefinitely
--- (PLAN.md §0.1: names are stable, indexes are not, so what is cached is the
--- resolved name→index mapping). Section *content* gets a 30-day expiry.
+-- `expires_at` NULL means "never". PLAN.md §1.2 allows that for section
+-- *indexes* on the grounds that names are stable and old-gen pages are
+-- effectively immutable. Taken literally that is a correctness hazard: an
+-- index cached forever plus content fetched *by* that index serves the wrong
+-- section the first time an editor inserts a heading above it.
+--
+-- So `sections` and `content` keys embed the page's **revision id**, which
+-- `wiki/client.py` re-probes on a 30-day cycle via the cheap `kind = 'page'`
+-- row. An edit changes the revid, which changes the key, which misses — so the
+-- rows can safely never expire, and a warm cache still makes zero requests
+-- within the probe window (PLAN.md §3.3: self-throttle, cache aggressively).
+--
+-- `payload` is always JSON. PLAN.md §6.7: wikitext must never cross the tool
+-- boundary, and caching it here would put that violation one careless SELECT
+-- away.
+--
+-- `payload_version` is `wiki/templates.py`'s PAYLOAD_VERSION: the format of the
+-- parsed rows in `payload`. It is a *column* rather than being folded into
+-- `meta.schema_version` for two reasons. First, the constraint lives in a
+-- different package from the code it constrains — schema_version describes this
+-- file, and a template-parser change need not touch this file at all, so a
+-- rebuild after such a change would carry up-to-30-day-old rows forward with the
+-- gate reporting success. `wiki_lookup` returns a cache hit's stored payload
+-- verbatim without re-validating it through the current model, so misses would
+-- look fine while hits served the old shape, and PLAN.md §5's
+-- `contains: ["Snorlax"]` assertion passes against either. Second, a column
+-- allows *per-row* filtering: a partial format change can invalidate the rows it
+-- affects instead of discarding the whole cache.
 CREATE TABLE wiki_cache (
     cache_key       TEXT PRIMARY KEY,
     kind            TEXT NOT NULL CHECK (kind IN ('sections', 'content', 'page')),
     page_title      TEXT NOT NULL,
     section_name    TEXT,
     payload         TEXT NOT NULL,
+    payload_version TEXT NOT NULL,      -- wiki/templates.py PAYLOAD_VERSION
     fetched_at      TEXT NOT NULL,      -- ISO-8601 UTC
     expires_at      TEXT                -- ISO-8601 UTC; NULL = never expires
 );

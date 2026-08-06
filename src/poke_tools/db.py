@@ -117,6 +117,21 @@ def open_connection(location: DatabaseLocation | None = None) -> sqlite3.Connect
     Read-only is not a precaution, it is the contract: every tool in PLAN.md
     §1.3 is annotated ``read_only_hint=True`` and nothing in this project
     mutates the database outside ``poke-tools-build``.
+
+    **A file existing is not the same as a database existing.** ``mode=ro`` opens
+    a 0-byte file perfectly happily, and every tool then failed with a bare
+    ``no such table: pokemon`` — which reads as a corrupt build — instead of the
+    :class:`DatabaseUnavailableError` that names ``POKE_TOOLS_DB`` and the build
+    command, and which is the entire diagnostic a fresh install has. Nothing in
+    this server creates such a file any more, but an interrupted or killed
+    ``poke-tools-build``, a pre-fix install, or a ``POKE_TOOLS_DB`` pointing at a
+    path someone ``touch``ed all still produce one. So the file is probed, not
+    trusted.
+
+    The probe is deliberately shallow — "does this contain any schema at all",
+    not "is this schema complete". Validating the build belongs to
+    ``poke-tools-build``; all this has to do is tell an unbuilt database from a
+    built one well enough to keep the actionable error.
     """
     resolved = location or resolve_db_path()
     if not resolved.exists:
@@ -133,6 +148,20 @@ def open_connection(location: DatabaseLocation | None = None) -> sqlite3.Connect
         raise DatabaseUnavailableError(
             _unavailable_message(resolved, f"could not open the pokédex ({exc})")
         ) from exc
+    try:
+        (tables,) = conn.execute("SELECT count(*) FROM sqlite_master").fetchone()
+    except sqlite3.Error as exc:
+        # Not a SQLite file at all, or a truncated one: `mode=ro` defers the
+        # header check to the first read, so this is where it surfaces.
+        conn.close()
+        raise DatabaseUnavailableError(
+            _unavailable_message(resolved, f"the pokédex is not a readable database ({exc})")
+        ) from exc
+    if not tables:
+        conn.close()
+        raise DatabaseUnavailableError(
+            _unavailable_message(resolved, "the pokédex file is empty — no tables at")
+        )
     conn.row_factory = sqlite3.Row
     return conn
 

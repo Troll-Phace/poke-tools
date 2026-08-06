@@ -1,0 +1,46 @@
+{
+ "requested": "Crobat (Pokémon)/Generation IV learnset",
+ "title": "Crobat (Pokémon)/Generation IV learnset",
+ "revid": 4059893,
+ "size": 7509,
+ "sections": [
+  {
+   "index": "1",
+   "line": "By leveling up",
+   "level": 4
+  },
+  {
+   "index": "2",
+   "line": "By TM/HM",
+   "level": 4
+  },
+  {
+   "index": "3",
+   "line": "By breeding",
+   "level": 4
+  },
+  {
+   "index": "4",
+   "line": "By tutoring",
+   "level": 4
+  },
+  {
+   "index": "5",
+   "line": "By a prior Evolution",
+   "level": 4
+  },
+  {
+   "index": "6",
+   "line": "By transfer from another generation",
+   "level": 4
+  },
+  {
+   "index": "7",
+   "line": "By events",
+   "level": 4
+  }
+ ],
+ "raw": "{{pokelinkback|169|Crobat|4}}\n====By [[Level|leveling up]]====\n{{learnlist/levelh|Crobat|Poison|Flying|4|2}}\n{{learnlist/level4|1|Cross Poison|Poison|Physical|70|100|20|Cool|3||'''}}\n{{learnlist/level4|1|Screech|Normal|Status|—|85|40|Smart|2}}\n{{learnlist/level4|1|Leech Life|Bug|Physical|20|100|15|Smart|1}}\n{{learnlist/level4|1|Supersonic|Normal|Status|—|55|20|Smart|2}}\n{{learnlist/level4|1|Astonish|Ghost|Physical|30|100|15|Smart|3}}\n{{learnlist/level4|5|Supersonic|Normal|Status|—|55|20|Smart|2}}\n{{learnlist/level4|9|Astonish|Ghost|Physical|30|100|15|Smart|3}}\n{{learnlist/level4|13|Bite|Dark|Physical|60|100|25|Tough|3}}\n{{learnlist/level4|17|Wing Attack|Flying|Physical|60|100|35|Cool|3||'''}}\n{{learnlist/level4|21|Confuse Ray|Ghost|Status|—|100|10|Smart|2}}\n{{learnlist/level4|27|Air Cutter|Flying|Special|55|95|25|Cool|3||'''}}\n{{learnlist/level4|33|Mean Look|Normal|Status|—|—|5|Beauty|2}}\n{{learnlist/level4|39|Poison Fang|Poison|Physical|50|100|15|Smart|2||'''}}\n{{learnlist/level4|45|Haze|Ice|Status|—|—|30|Beauty|2}}\n{{learnlist/level4|51|Air Slash|Flying|Special|75|95|20|Cool|2||'''}}\n{{learnlist/levelf|Crobat|Poison|Flying|4|2}}\n\n====By [[TM]]/[[HM]]====\n{{learnlist/tmh|Crobat|Poison|Flying|4|2}}\n{{learnlist/tm4|TM06|Toxic|Poison|Status|—|85|10|Smart|2}}\n{{learnlist/tm4|TM10|Hidden Power|Normal|Special|—|100|15|Smart|1}}\n{{learnlist/tm4|TM11|Sunny Day|Fire|Status|—|—|5|Beauty|2}}\n{{learnlist/tm4|TM12|Taunt|Dark|Status|—|100|20|Smart|0}}\n{{learnlist/tm4|TM15|Hyper Beam|Normal|Special|150|90|5|Cool|2}}\n{{learnlist/tm4|TM17|Protect|Normal|Status|—|—|10|Cute|0}}\n{{learnlist/tm4|TM18|Rain Dance|Water|Status|—|—|5|Tough|2}}\n{{learnlist/tm4|TM19|Giga Drain|Grass|Special|60|100|10|Smart|1}}\n{{learnlist/tm4|TM21|Frustration|Normal|Physical|—|100|20|Cute|2}}\n{{learnlist/tm4|TM27|Return|Normal|Physical|—|100|20|Cute|2}}\n{{learnlist/tm4|TM30|Shadow Ball|Ghost|Special|80|100|15|Smart|2}}\n{{learnlist/tm4|TM32|Double Team|Normal|Status|—|—|15|Cool|2}}\n{{learnlist/tm4|TM36|Sludge Bomb|Poison|Special|90|100|10|Tough|2||'''}}\n{{learnlist/tm4|TM40|Aerial Ace|Flying|Physical|60|—|20|Cool|2||'''}}\n{{learnlist/tm4|TM41|Torment|Dark|Status|—|100|15|Tough|0}}\n{{learnlist/tm4|TM42|Facade|Normal|Physical|70|100|20|Cute|2}}\n{{learnlist/tm4|TM43|Secret Power|Normal|Physical|70|100|20|Smart|2}}\n{{learnlist/tm4|TM44|Rest|Psychic|Status|—|—|10|Cute|0}}\n{{learnlist/tm4|TM45|Attract|Normal|Status|—|100|15|Cute|2}}\n{{learnlist/tm4|TM46|Thief|Dark|Physical|40|100|10|Tough|0}}\n{{learnlist/tm4|TM47|Steel Wing|Steel|Physical|70|90|25|Cool|3}}\n{{learnlist/tm4|TM49|Snatch|Dark|Status|—|—|10|Smart|0}}\n{{learnlist/tm4|TM51|Roost|Flying|Status|—|—|10|Cool|0}}\n{{learnlist/tm4|TM58|Endure|Normal|Status|—|—|10|Tough|2}}\n{{learnlist/tm4|TM66|Payback|Dark|Physical|50|100|10|Cool|1}}\n{{learnlist/tm4|TM68|Giga Impact|Normal|Physical|150|90|5|Beauty|2}}\n{{learnlist/tm4|TM78|Captivate|Normal|Status|—|100|20|Beauty|2}}\n{{learnlist/tm4|TM79|Dark Pulse|Dark|Special|80|100|15|Cool|2}}\n{{learnlist/tm4|TM81|X-Scissor|Bug|Physical|80|100|15|Beauty|2}}\n{{learnlist/tm4|TM82|Sleep Talk|Normal|Status|—|—|10|Cute|3}}\n{{learnlist/tm4|TM83|Natural Gift|Normal|Physical|—|100|15|Cool|2}}\n{{learnlist/tm4|TM87|Swagger|Normal|Status|—|90|15|Cute|2}}\n{{learnlist/tm4|TM88|Pluck|Flying|Physical|60|100|20|Cute|0||'''}}\n{{learnlist/tm4|TM89|U-turn|Bug|Physical|70|100|20|Cute|0}}\n{{learnlist/tm4|TM90|Substitute|Normal|Status|—|—|10|Smart|1}}\n{{learnlist/tm4|HM02|Fly|Flying|Physical|90|95|15|Smart|1||'''}}\n{{learnlist/tm4|HM05|Defog|Flying|Status|—|—|15|Beauty|2|||DPPt}}\n{{learnlist/tmf|Crobat|Poison|Flying|4|2}}\n\n====By {{pkmn|breeding}}====\n{{learnlist/breedh|Crobat|Poison|Flying|4|2}}\n{{learnlist/breed4|{{MSP/3|396|Starly}}{{MSP/3|397|Staravia}}{{MSP/3|398|Staraptor}}|Brave Bird|Flying|Physical|120|100|15|Cute|2||'''|grid=8}}\n{{learnlist/breed4|{{MSP/3|083|Farfetch'd}}{{MSP/3|142|Aerodactyl}}{{MSP/3|227|Skarmory}}|Curse|???|Status|—|—|10|Tough|0|*|grid=8}}\n{{learnlist/breed4|{{MSP/3|198|Murkrow}}{{MSP/3|430|Honchkrow}}|Faint Attack|Dark|Physical|60|—|20|Smart|2|grid=8}}\n{{learnlist/breed4|{{MSP/3|016|Pidgey}}{{MSP/3|017|Pidgeotto}}{{MSP/3|018|Pidgeot}}|Gust|Flying|Special|40|100|35|Smart|3||'''|grid=8}}\n{{learnlist/breed4|{{MSP/3|163|Hoothoot}}{{MSP/3|164|Noctowl}}|Hypnosis|Psychic|Status|—|{{tt|60|70 in Pokémon Diamond and Pearl and Pokémon Battle Revolution}}|20|Smart|2|grid=8}}\n{{learnlist/breed4|{{MSP/3|430|Honchkrow}}|Nasty Plot|Dark|Status|—|—|20|Cute|0|grid=8}}\n{{learnlist/breed4|{{MSP/3|021|Spearow}}{{MSP/3|022|Fearow}}{{MSP/3|084|Doduo}}{{MSP/3|085|Dodrio}}{{MSP/3|198|Murkrow}}{{MSP/3|430|Honchkrow}}{{MSP/3|278|Wingull}}{{MSP/3|279|Pelipper}}|Pursuit|Dark|Physical|40|100|20|Smart|1|grid=8}}\n{{learnlist/breed4|{{MSP/3|016|Pidgey}}{{MSP/3|017|Pidgeotto}}{{MSP/3|018|Pidgeot}}{{MSP/3|084|Doduo}}{{MSP/3|085|Dodrio}}{{MSP/3|276|Taillow}}{{MSP/3|277|Swellow}}{{MSP/3|278|Wingull}}{{MSP/3|279|Pelipper}}{{MSP/3|396|Starly}}{{MSP/3|397|Staravia}}{{MSP/3|398|Staraptor}}|Quick Attack|Normal|Physical|40|100|30|Cool|2|grid=8}}\n{{learnlist/breed4|{{MSP/3|016|Pidgey}}{{MSP/3|017|Pidgeotto}}{{MSP/3|018|Pidgeot}}{{MSP/3|396|Starly}}{{MSP/3|397|Staravia}}{{MSP/3|398|Staraptor}}|Whirlwind|Normal|Status|—|100|20|Smart|0|grid=8}}\n{{learnlist/breed4|{{MSP/3|163|Hoothoot}}{{MSP/3|164|Noctowl}}|Zen Headbutt|Psychic|Physical|80|90|15|Beauty|2|grid=8}}\n{{learnlist/breedf|Crobat|Poison|Flying|4|2}}\n\n====By [[Move Tutor|tutoring]]====\n{{learnlist/tutorh|Crobat|Poison|Flying|4|2}}\n{{learnlist/tutor4|Air Cutter|Flying|Special|55|95|25|Cool|3||'''|no|yes|yes}}\n{{learnlist/tutor4|Heat Wave|Fire|Special|100|90|10|Beauty|2|||no|yes|yes}}\n{{learnlist/tutor4|Ominous Wind|Ghost|Special|60|100|5|Smart|0|||no|yes|yes}}\n{{learnlist/tutor4|Sky Attack|Flying|Physical|140|90|5|Cool|1||'''|no|no|yes}}\n{{learnlist/tutor4|Snore|Normal|Special|40|100|15|Cute|3|||no|yes|yes}}\n{{learnlist/tutor4|Super Fang|Normal|Physical|—|90|10|Tough|3|||no|no|yes}}\n{{learnlist/tutor4|Swift|Normal|Special|60|—|20|Cool|2|||no|yes|yes}}\n{{learnlist/tutor4|Tailwind|Flying|Status|—|—|30|Smart|2|||no|no|yes}}\n{{learnlist/tutor4|Twister|Dragon|Special|40|100|20|Cool|3|||no|yes|yes}}\n{{learnlist/tutor4|Uproar|Normal|Special|50|100|10|Cute|2|||no|yes|yes}}\n{{learnlist/tutor4|Zen Headbutt|Psychic|Physical|80|90|15|Beauty|2|||no|yes|yes}}\n{{learnlist/tutorf|Crobat|Poison|Flying|4|2}}\n\n====By a prior [[Evolution]]====\n{{Learnlist/prevoh|Crobat|Poison|Flying|4|2}}\n{{Learnlist/prevo4null}}\n{{Learnlist/prevof|Crobat|Poison|Flying|4|2}}\n\n====By [[transfer]] from another generation====\n{{learnlist/prevgenh/4|Crobat|Poison|Flying|2}}\n{{learnlist/prevgen4|Crobat|2|Double-Edge|Normal|Physical|120|100|15|||Tough|0|III=yes<!--tutor-->}}\n{{learnlist/prevgen4|Crobat|2|Mimic|Normal|Status|—|—|10|||Cute|0|III=yes<!--tutor-->}}\n{{learnlist/prevgenf/4|Crobat|Poison|Flying|2}}\n\n====By {{pkmn2|event}}s====\n{{learnlist/eventh|Crobat|poison|flying|4|2}}\n{{learnlist/event4|[[2010 World Championships Crobat]]|Air Slash|Flying|Special|75|95|20|Cool|2||'''|30}}\n{{learnlist/event4|[[2010 World Championships Crobat]]{{sup/4|DP}}|Heat Wave|Fire|Special|100|90|10|Beauty|2||}}\n{{learnlist/event4|[[2010 World Championships Crobat]]{{sup/4|DPPt}}|Super Fang|Normal|Physical|—|90|10|Tough|3||}}\n{{learnlist/eventf|Crobat|poison|flying|4|2}}\n\n[[it:Crobat/Mosse apprese in quarta generazione]]\n[[zh:叉字蝠/第四世代招式表]]",
+ "parsetrees": {},
+ "prefix_search": {}
+}

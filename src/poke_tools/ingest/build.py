@@ -16,8 +16,9 @@ The one thing carried across a rebuild is ``wiki_cache``. Bulbapedia content is
 slow to fetch (PLAN.md §3.3 self-throttles to a 5-second crawl delay), and a CSV
 refresh says nothing about whether a cached wiki section is still valid — so
 discarding it on every rebuild would cost real time for no correctness gain. The
-carryover is gated on ``schema_version`` and reported either way; see
-:func:`_rescue_wiki_cache`.
+carryover is gated twice — on ``schema_version`` for the table shape and, per
+row, on ``wiki/templates.py``'s ``PAYLOAD_VERSION`` for the parsed payload
+format — and reported either way; see :func:`_rescue_wiki_cache`.
 
 Exit codes:
 
@@ -46,18 +47,26 @@ from poke_tools import __version__
 from poke_tools.db import resolve_db_path
 from poke_tools.ingest import pokeapi_csv, showdown
 from poke_tools.ingest.pokeapi_csv import IngestError, SourceFile
+from poke_tools.wiki.templates import PAYLOAD_VERSION
 
 #: Bumped whenever ``schema.sql`` changes shape, so a stale database can be
-#: recognised rather than mis-queried.
+#: recognised rather than mis-queried. It describes **this file only**.
 #:
-#: It also gates the ``wiki_cache`` carryover, so **bump it whenever the payload
-#: shape written by ``wiki/templates.py`` changes**, even if ``schema.sql`` is
-#: untouched. That is what stops a Phase 3 parser change from silently
-#: resurrecting old-format payloads into new parser code — see
-#: :func:`_rescue_wiki_cache`.
+#: It used to double as the ``wiki_cache`` carryover gate, on the theory that
+#: bumping it by hand whenever ``wiki/templates.py`` changed would keep stale
+#: payloads out. That coupling was unsound: the constraint lived in a different
+#: package from the code it constrained, and a parser change need not touch
+#: ``schema.sql``, so the honest sequence — edit a template parser, rebuild —
+#: left this constant untouched, the gate reporting success, and up-to-30-day-old
+#: rows carried forward. ``wiki_lookup`` serves a cache hit's stored payload
+#: verbatim, so misses would have looked correct while hits served the old shape.
+#: The gate now lives beside the parsers as
+#: :data:`~poke_tools.wiki.templates.PAYLOAD_VERSION` and is enforced per row.
+#:
 #: 3 — added ``item_game_indices`` and ``pokemon_items`` so ``get_item`` can say
 #: whether an item exists in the requested game at all, and who holds it wild.
-SCHEMA_VERSION = "3"
+#: 4 — added ``wiki_cache.payload_version`` (Phase 3).
+SCHEMA_VERSION = "4"
 
 #: Where downloaded sources live, relative to the database. Gitignored.
 CACHE_DIRNAME = "source-cache"
@@ -102,15 +111,25 @@ def _rescue_wiki_cache(existing: Path, *, enabled: bool = True) -> CacheCarryove
     """Read ``wiki_cache`` rows out of a previous build, if they are still valid.
 
     ``payload`` is *parsed* JSON whose shape is coupled to ``wiki/templates.py``,
-    not opaque bytes. Carrying it unconditionally means a Phase 3 parser change
-    followed by a rebuild silently resurrects old-format payloads into new parser
-    code — with the eval suite passing against stale rows, which is a brutal
-    thing to diagnose. So the carryover is gated on the previous database's
-    stamped ``schema_version`` matching :data:`SCHEMA_VERSION`; anything else
-    (mismatch, missing stamp, unreadable file) discards.
+    not opaque bytes. Carrying it unconditionally means a parser change followed
+    by a rebuild silently resurrects old-format payloads into new parser code —
+    with the eval suite passing against stale rows, which is a brutal thing to
+    diagnose.
 
-    The decision is always reported through :attr:`CacheCarryover.reason` rather
-    than taken silently.
+    **Two gates, because they guard different things.** ``schema_version`` guards
+    the *table shape*: the ``SELECT`` below names its columns, so a previous
+    database written against a different ``schema.sql`` cannot be read at all.
+    :data:`~poke_tools.wiki.templates.PAYLOAD_VERSION` guards the *payload
+    format*, per row, and is the one that matters in practice — it lives in the
+    file an author is editing when they change a parser, whereas
+    ``schema_version`` lives here and would not be touched by that edit.
+
+    Per-row rather than all-or-nothing: a format change that only affects, say,
+    tutor rows should not throw away every cached item-acquisition table and cost
+    a 5-second crawl delay apiece to re-fetch (PLAN.md §3.3).
+
+    Every decision is reported through :attr:`CacheCarryover.reason` rather than
+    taken silently, including the partial case.
     """
     if not enabled:
         return CacheCarryover([], "carryover declined: --no-cache-carryover")
@@ -150,12 +169,19 @@ def _rescue_wiki_cache(existing: Path, *, enabled: bool = True) -> CacheCarryove
             )
 
         rows = conn.execute(
-            "SELECT cache_key, kind, page_title, section_name, payload, fetched_at, expires_at "
-            "FROM wiki_cache"
+            "SELECT cache_key, kind, page_title, section_name, payload, payload_version, "
+            "fetched_at, expires_at FROM wiki_cache WHERE payload_version = ?",
+            (PAYLOAD_VERSION,),
         ).fetchall()
-        return CacheCarryover(
-            rows, f"carried {len(rows):,} row(s) at schema_version {SCHEMA_VERSION}"
-        )
+        total = conn.execute("SELECT COUNT(*) FROM wiki_cache").fetchone()[0]
+        stale = total - len(rows)
+        reason = f"carried {len(rows):,} row(s) at payload_version {PAYLOAD_VERSION}"
+        if stale:
+            reason += (
+                f"; discarded {stale:,} row(s) written by an earlier parser format "
+                "(wiki/templates.py PAYLOAD_VERSION changed)"
+            )
+        return CacheCarryover(rows, reason)
     except sqlite3.DatabaseError as exc:
         # A corrupt or foreign file sitting at the target path is not a reason to
         # fail the build — it is about to be replaced wholesale, and a cache that
@@ -170,8 +196,9 @@ def _restore_wiki_cache(conn: sqlite3.Connection, rows: list[tuple[object, ...]]
         return
     conn.executemany(
         "INSERT INTO wiki_cache ("
-        "cache_key, kind, page_title, section_name, payload, fetched_at, expires_at"
-        ") VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "cache_key, kind, page_title, section_name, payload, payload_version, "
+        "fetched_at, expires_at"
+        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         rows,
     )
 
@@ -255,6 +282,7 @@ def build(
             conn,
             {
                 "schema_version": SCHEMA_VERSION,
+                "wiki_payload_version": PAYLOAD_VERSION,
                 "builder_version": __version__,
                 "built_at": _now(),
                 "pokeapi_csv_base_url": pokeapi_csv.CSV_BASE_URL,

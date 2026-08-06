@@ -469,16 +469,25 @@ def test_an_in_era_species_with_no_rows_is_low_not_high(conn: sqlite3.Connection
 def _assert_coverage_signals_agree(result) -> None:
     """``confidence`` and ``coverage_note`` are one §3.9 contract, so they must agree.
 
-    ``coverage_note`` may be null *only* when ``confidence`` is ``high`` and rows
-    were found — the model says so, and a response that violates it hands the
-    reader two answers to choose between.
+    ``coverage_note`` may be null *only* when ``confidence`` is ``high`` and the
+    answer is non-empty — the model says so, and a response that violates it
+    hands the reader two answers to choose between.
+
+    **Emptiness is keyed on ``total_count``, not on ``len(rows)``.** Both graders
+    in ``locations.py`` grade the *answer*, and an over-large ``offset`` returns a
+    rowless page of a perfectly complete answer. Keying the invariant on the page
+    would have made every paginated call above the last page red — an Emerald
+    page past the end trips the ``partial`` clause, an HGSS one trips the
+    null-note clause — naming no code defect at all. Same coupling that was
+    removed from the PLAN.md §1.3 parse, pointing at pagination instead.
     """
+    empty = result.total_count == 0
     if result.coverage_note is None:
         assert result.confidence == "high"
-        assert result.rows, "an empty answer with neither a note nor a hedge is silently empty"
+        assert not empty, "an empty answer with neither a note nor a hedge is silently empty"
     if result.confidence == "low":
-        assert not result.rows, "`low` means no rows were found; rows were returned"
-    if not result.rows:
+        assert empty, "`low` means nothing was found; the answer is non-empty"
+    if empty:
         # `partial` claims an answer exists and is incomplete. On an empty answer
         # that is a contradiction in both tools, and it is the exact shape the
         # `list_obtainable` grading inversion produced: Emerald was graded
@@ -547,6 +556,67 @@ def test_an_empty_obtainable_answer_says_nothing_matched_before_hedging_on_emera
     assert "No recorded encounter matches" in note
     assert "thin" in note, "the Emerald caveat was dropped rather than appended"
     assert note.index("No recorded encounter matches") < note.index("thin")
+
+
+_PAST_THE_END = 10_000
+
+
+def test_a_page_past_the_end_is_rowless_without_being_an_empty_answer(
+    conn: sqlite3.Connection,
+) -> None:
+    """*** The case that distinguishes "no rows here" from "no rows at all". ***
+
+    Both graders in ``locations.py`` key on ``page.total_count == 0``, so a page
+    requested beyond the last one is a rowless slice of an answer that is not
+    empty and is graded exactly as page zero was. Pinned as two concrete cases
+    because the invariant helper only proves the signals agree — it cannot show
+    that the grade *survives* pagination, and a grader that hedged on a rowless
+    page would satisfy the helper while telling the reader their complete answer
+    is incomplete.
+
+    The two are chosen to sit on opposite sides of the rule: the Emerald one is
+    graded ``partial`` with a note (which the old ``if not rows`` form rejected
+    outright), the HGSS one ``high`` with no note (which it rejected on the
+    null-note clause). Neither response is wrong; the assertion was.
+    """
+    thin = list_obtainable("emerald", 8, method="any", offset=_PAST_THE_END, conn=conn)
+    assert thin.rows == [], "expected a page past the end of the result set"
+    assert thin.total_count > 0, "this case only bites when the *answer* is non-empty"
+    assert thin.confidence == "partial"
+    assert thin.coverage_note, "the Emerald caveat is a property of the answer, not of the page"
+    assert thin.next_offset is None
+
+    covered = where_to_find("zubat", "heartgold-soulsilver", offset=_PAST_THE_END, conn=conn)
+    assert covered.rows == []
+    assert covered.total_count > 0
+    assert covered.confidence == "high"
+    assert covered.coverage_note is None, (
+        "a complete answer must not acquire a hedge by being paged past its end"
+    )
+    assert covered.next_offset is None
+
+
+@pytest.mark.parametrize(
+    ("tool", "args", "kwargs"),
+    [
+        (list_obtainable, ("emerald", 8), {"method": "any"}),
+        (list_obtainable, ("heartgold-soulsilver", 8), {"method": "any"}),
+        (where_to_find, ("zubat", "heartgold-soulsilver"), {}),
+        (where_to_find, ("feebas", "emerald"), {}),
+    ],
+)
+def test_paging_past_the_end_does_not_disturb_the_coverage_contract(
+    conn: sqlite3.Connection, tool, args: tuple, kwargs: dict
+) -> None:
+    """The §3.9 invariant, run against a rowless page of a non-empty answer.
+
+    This is the exercise half of the fix above: with emptiness keyed on
+    ``len(rows)`` every one of these four went red, so the corrected rule is
+    doing work here rather than merely being correct in principle.
+    """
+    page = tool(*args, offset=_PAST_THE_END, conn=conn, **kwargs)
+    assert page.total_count > 0 and not page.rows, "not actually a page past the end"
+    _assert_coverage_signals_agree(page)
 
 
 def test_hgss_answers_explain_what_a_single_version_row_means(
@@ -841,7 +911,10 @@ def test_a_filtered_empty_result_still_grades_confidence_honestly(
     """
     result = where_to_find("magikarp", "heartgold-soulsilver", method="headbutt", conn=conn)
     assert result.confidence == "low"
-    assert not result.rows
+    # `total_count`, not `len(rows)` — identical here (this is an unpaged, genuinely
+    # empty answer), but emptiness means the same thing everywhere in this file, so
+    # no reader has to work out which kind a given assertion meant.
+    assert result.total_count == 0
 
 
 def test_a_filtered_answer_says_it_was_filtered_even_when_rows_come_back(

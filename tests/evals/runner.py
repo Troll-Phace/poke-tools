@@ -49,7 +49,7 @@ TOOL_REGISTRY: dict[str, tuple[str, str]] = {
 #: Assertion keys the suite understands. Anything else in an `expect:` block is a
 #: typo that would otherwise assert nothing at all, so it is rejected loudly.
 SUPPORTED_ASSERTIONS = frozenset(
-    {"contains", "count", "all_legal", "max_bytes", "source_not", "fields"}
+    {"contains", "not_contains", "count", "all_legal", "max_bytes", "source_not", "fields"}
 )
 
 
@@ -309,11 +309,46 @@ def check_case(case: EvalCase, result: Any) -> None:
                     f"no row matched {expected!r}{context}"
                 )
 
+    if "not_contains" in case.expect:
+        _check_not_contains(case, result, context)
+
     if "fields" in case.expect:
         _check_fields(case, result, context)
 
     if "source_not" in case.expect:
         _check_source_not(case, result, context)
+
+
+def _check_not_contains(case: EvalCase, result: Any, context: str) -> None:
+    """The mirror of ``contains``: absence, asserted rather than assumed.
+
+    **Absence is an answer, and the suite could not state one.** PLAN.md §2's
+    phase-3 exit criterion asks "which Emerald Battle Frontier tutor teaches
+    Earthquake and what does it cost" — a question with a *false premise*, since
+    no Emerald tutor teaches Earthquake at all; it is TM26. The correct response
+    is the complete tutor list plus a note saying a move missing from it is not
+    taught here, and pointing at ``get_learnset`` with ``methods=['machine']``.
+
+    Every existing assertion key grades that response on what it *has*. Only this
+    one can pin what it must not have — and "Earthquake is not in the tutor list"
+    is exactly the fact a regression would break, by leaking a Gen 4 tutor row or
+    a TM row into a Gen 3 tutor section.
+
+    Same two spellings as ``contains``: a string is a substring of the serialised
+    result, a mapping is a row subset.
+    """
+    for expected in case.expect["not_contains"]:
+        if isinstance(expected, str):
+            blob = serialize(result).decode("utf-8")
+            assert expected.lower() not in blob.lower(), (
+                f"substring {expected!r} was found in the result and must not be{context}"
+            )
+        else:
+            rows = extract_rows(result)
+            offending = [row for row in rows if _row_matches(row, expected)]
+            assert not offending, (
+                f"{len(offending)} row(s) matched {expected!r}, which must not be present{context}"
+            )
 
 
 def _check_fields(case: EvalCase, result: Any, context: str) -> None:
@@ -325,19 +360,43 @@ def _check_fields(case: EvalCase, result: Any, context: str) -> None:
     which is precisely the kind of assertion that goes green while the value is
     wrong. Comparison is on the JSON-dumped payload so YAML lists compare cleanly
     against Pydantic lists.
+
+    **Lists and dicts compare by ``==``, and that is deliberately stricter than
+    ``contains``.** Under ``contains`` a row expectation goes through
+    :func:`_values_match`, so ``versions: ['heartgold', 'soulsilver']`` matches
+    case-insensitively and a dict matches on the named keys. Here the same YAML
+    is an exact, case-*sensitive*, whole-value comparison. The divergence is
+    intentional and neither side can be moved to meet the other:
+
+    * Loosening this one to case-insensitive would put the suite in direct
+      self-contradiction. ``fields: {confidence: high}`` is used by several cases,
+      and ``test_an_undeclared_confidence_value_is_rejected`` parametrizes
+      ``"HIGH"`` as exactly the drift a case must catch — a case-insensitive
+      ``fields`` would accept it.
+    * Tightening ``contains`` to case-sensitive would break row matching, which
+      exists to name a few fields of a row and ignore the rest.
+
+    So: ``contains`` answers "is there a row like this", ``fields`` answers "is
+    this value exactly this". Pick the one you mean.
     """
     payload = _as_dict(result)
     assert payload, f"result of type {type(result).__name__} has no field mapping{context}"
     for name, expected in case.expect["fields"].items():
         assert name in payload, f"result has no field {name!r}{context}"
         actual = payload[name]
-        if isinstance(expected, bool) or expected is None:
+        if isinstance(expected, bool) or isinstance(actual, bool) or expected is None:
             # Identity, not equality. `available_in_game` is three-valued —
             # True / False / None, where None means "upstream records nothing,
             # so this is unknown rather than denied" — and `False == 0` and
             # `True == 1` in Python, so `==` would let a count or a rarity
             # satisfy a `false` expectation. The field exists to keep those
             # three answers distinct; the assertion on it has to as well.
+            #
+            # Branching on `actual` too, mirroring `_values_match`: keying on
+            # `expected` alone leaves the same hole pointing the other way, where
+            # `fields: {total_count: 0}` is satisfied by an actual of `False`.
+            # Unreachable while Pydantic coerces every field to its declared
+            # type, but the guard costs one clause and the asymmetry is the trap.
             assert actual is expected, (
                 f"field {name!r}: expected {expected!r}, got {actual!r}{context}"
             )
@@ -367,13 +426,52 @@ def _check_source_not(case: EvalCase, result: Any, context: str) -> None:
 
     * ``confidence`` must be one of the three declared values.
     * ``coverage_note`` may be null **only** when ``confidence`` is ``high`` and
-      rows were found. An empty answer always explains itself, including the one
-      empty answer that is complete (a species postdating the game).
-    * ``low`` means no rows; returning rows alongside it is the two signals
-      contradicting each other.
+      the answer is non-empty. An empty answer always explains itself, including
+      the one empty answer that is complete (a species postdating the game).
+    * ``low`` means nothing was found; a non-empty answer alongside it is the two
+      signals contradicting each other.
+    * ``partial`` claims an incomplete answer *exists*, so an empty answer may
+      never carry it. Under the Phase 2 grading fix a genuinely empty answer is
+      graded not-found-first and comes back ``low``, which makes this clause
+      unreachable through either location tool today — that is the point. It was
+      reachable, it shipped that way once (``list_obtainable`` graded Emerald
+      ``partial`` before checking whether anything matched, so the game with a
+      quarter of HGSS's coverage answered an identical empty question with the
+      *more* confident grade), and the null-note clause above does not catch it:
+      the thin-Emerald caveat satisfies that one on its own. Asserted here as
+      well as in ``tests/test_locations.py`` because this harness is what every
+      future eval case trusts, and the contract should not be weaker in the place
+      more cases depend on.
 
-    A live Bulbapedia result is still accepted on its ``source`` alone: Tier 2 is
-    Phase 3 and has not chosen its coverage fields yet.
+    **Emptiness is "the answer has no rows", not "this page has no rows".** Both
+    graders in ``locations.py`` key on ``total_count``, and a case passing an
+    ``offset`` past the end gets a rowless page of a complete answer — honest,
+    and red under a ``len(rows)`` reading for no reason a code change could fix.
+    ``total_count`` is the §1.3 field every list response carries; a result
+    without one (a bare list, or a Phase 3 wiki payload) falls back to its rows,
+    where page and answer are the same thing.
+
+    **The Tier 2 waiver is gone.** This check used to return early on
+    ``source == "bulbapedia"``, accepting a wiki result on its provenance alone,
+    because Phase 3 had not chosen its coverage fields. It has now: ``WikiSection``
+    carries the same ``confidence`` + ``coverage_note`` pair as Tier 1 and extends
+    ``PagedResult``, so ``total_count`` is present and every clause below applies
+    unchanged. Leaving the waiver in would have made "the answer came from
+    Bulbapedia" a way to *opt out* of the honesty contract — the exact inversion
+    §3.9 warns about, since Tier 2 is reached precisely when Tier 1's coverage
+    ran out and the answer is least certain.
+
+    The wiki tier's grades map onto the same three clauses:
+
+    * ``high``    — a recognised template family parsed into structured rows.
+    * ``partial`` — the section fell back to plain text, **or** its name matched
+      more than one section (``Leftovers`` has two "Acquisition" sections, one
+      core-series and one Pokémon Pokopia).
+    * ``low``     — the section resolved but yielded nothing at all.
+
+    A missing page or a section-name miss **raises** rather than returning an
+    empty answer, so neither can reach this function — which is why ``low`` here
+    means "resolved and parsed to nothing", not "not found".
     """
     forbidden = case.expect["source_not"]
     payload = _as_dict(result)
@@ -383,10 +481,9 @@ def _check_source_not(case: EvalCase, result: Any, context: str) -> None:
         assert source != forbidden, f"source was {source!r}, which is disallowed{context}"
         return
 
-    if source == "bulbapedia":
-        return
-
     rows = extract_rows(result)
+    total = payload.get("total_count")
+    answer_size = len(rows) if not isinstance(total, int) or isinstance(total, bool) else total
     confidence = payload.get("confidence")
     note = payload.get("coverage_note")
 
@@ -398,12 +495,18 @@ def _check_source_not(case: EvalCase, result: Any, context: str) -> None:
         assert confidence == "high", (
             f"confidence is {confidence!r} with no `coverage_note` to explain it{context}"
         )
-        assert rows, (
-            f"empty result returned as a complete answer: no rows, no coverage note{context}"
+        assert answer_size, (
+            f"empty result returned as a complete answer: nothing found, no coverage note{context}"
         )
+    if not answer_size:
+        assert confidence != "partial", (
+            f"empty answer graded as partially complete: total_count is 0 but confidence "
+            f"is 'partial', which claims an incomplete answer exists{context}"
+        )
+        assert note, f"empty answer with no `coverage_note` to say nothing matched{context}"
     if confidence == "low":
-        assert not rows, (
-            f"confidence is 'low' but {len(rows)} row(s) were returned — the two "
+        assert not answer_size, (
+            f"confidence is 'low' but total_count is {answer_size} — the two "
             f"coverage signals contradict each other{context}"
         )
 

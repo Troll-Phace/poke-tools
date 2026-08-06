@@ -176,6 +176,14 @@ def test_every_list_expectation_in_the_suite_is_written_as_a_real_list() -> None
     older case from a git blame. A value that *looks* like a Python list literal
     inside a string is always the mistake — YAML has list syntax.
     """
+    scanned = [
+        (case.name, key, value)
+        for case in load_cases()
+        for expected in case.expect.get("contains", [])
+        if isinstance(expected, dict)
+        for key, value in expected.items()
+        if isinstance(value, list | tuple)
+    ]
     offenders = [
         (case.name, key, value)
         for case in load_cases()
@@ -185,6 +193,11 @@ def test_every_list_expectation_in_the_suite_is_written_as_a_real_list() -> None
         if isinstance(value, str) and value.strip().startswith("[")
     ]
     assert offenders == [], f"repr-string expectations found: {offenders}"
+    # The complement, without which this guard passes by scanning nothing. The
+    # list-valued expectations are the only ones the repr-string style could be
+    # spelled *in*; if they were all rewritten away the assertion above would go
+    # green having examined an empty suite.
+    assert scanned, "no list-valued `contains` expectations in the suite at all"
 
 
 # ---------------------------------------------------------------------------
@@ -241,6 +254,58 @@ def test_an_empty_answer_that_explains_itself_passes() -> None:
             confidence="high",
             coverage_note="Gible was introduced in generation 4.",
         ),
+        _CONTEXT,
+    )
+
+
+def test_an_empty_answer_may_not_be_graded_partial() -> None:
+    """*** The grading inversion, guarded in the harness and not only in the tool tests. ***
+
+    ``partial`` claims an incomplete answer exists, which an empty answer does
+    not. This shipped once: ``list_obtainable`` graded Emerald ``partial``
+    *before* checking whether anything matched, so the game with a quarter of
+    HGSS's encounter coverage answered an identical empty question with the
+    *more* confident grade and never said that nothing matched.
+
+    The null-note clause does not catch it — the thin-Emerald caveat satisfies
+    that one by itself — which is why this is a clause of its own. Unreachable
+    through either location tool under the fixed grading, and asserted anyway:
+    ``tests/test_locations.py`` held this rule while the harness every future
+    eval case runs through did not, and the weaker of two copies of a contract is
+    the one that decides what actually gets enforced.
+    """
+    with pytest.raises(AssertionError, match="partially complete"):
+        _check_source_not(
+            _SOURCE_NOT,
+            _payload(
+                rows=[],
+                total_count=0,
+                confidence="partial",
+                coverage_note="Emerald's encounter data is thin.",
+            ),
+            _CONTEXT,
+        )
+
+
+def test_an_empty_answer_is_judged_on_total_count_not_on_the_page() -> None:
+    """A rowless page of a non-empty answer is not an empty answer.
+
+    The complement of the case above, and the reason the clause keys on
+    ``total_count``: an ``offset`` past the end returns zero rows from a complete
+    result set, graded exactly as page zero was. Both shapes below are honest and
+    must pass — ``partial`` with a note, and ``high`` with none — and both were
+    red under a ``len(rows)`` reading, on assertions naming no code defect.
+    """
+    _check_source_not(
+        _SOURCE_NOT,
+        _payload(
+            rows=[], total_count=153, confidence="partial", coverage_note="Emerald data is thin."
+        ),
+        _CONTEXT,
+    )
+    _check_source_not(
+        _SOURCE_NOT,
+        _payload(rows=[], total_count=100, confidence="high", coverage_note=None),
         _CONTEXT,
     )
 
@@ -308,13 +373,73 @@ def test_low_confidence_alongside_rows_is_rejected() -> None:
         )
 
 
-def test_a_bulbapedia_result_is_accepted_on_its_source_alone() -> None:
-    """Tier 2 has not chosen its coverage fields yet (Phase 3).
+def test_a_bulbapedia_result_is_no_longer_exempt_from_the_coverage_contract() -> None:
+    """*** The Tier 2 waiver, closed. ***
 
-    Documented as a deliberate exemption rather than left as a gap in the rules:
-    when the wiki tools land, this test is the marker for where to tighten.
+    This check used to return early on ``source == "bulbapedia"`` because Phase 3
+    had not chosen its coverage fields. It has now — ``WikiSection`` carries the
+    same ``confidence`` + ``coverage_note`` pair as Tier 1 and extends
+    ``PagedResult``, so ``total_count`` is there and every clause applies.
+
+    Leaving the waiver would have made "the answer came from Bulbapedia" a way to
+    *opt out* of the honesty contract, which is backwards: Tier 2 is reached
+    precisely when Tier 1's coverage ran out, so it is the answer least entitled
+    to be graded on provenance alone. An empty wiki result with no confidence
+    signal is exactly the silently-empty shape the assertion is named after.
     """
-    _check_source_not(_SOURCE_NOT, {"source": "bulbapedia", "rows": []}, _CONTEXT)
+    with pytest.raises(AssertionError, match="confidence"):
+        _check_source_not(
+            _SOURCE_NOT, {"source": "bulbapedia", "rows": [], "total_count": 0}, _CONTEXT
+        )
+
+
+def test_the_three_wiki_grades_pass_the_same_contract_tier_one_does() -> None:
+    """The tier's own semantics, run through the now-unwaived check.
+
+    ``high`` on structured rows, ``partial`` on a text fallback *or* an ambiguous
+    section name, ``low`` on a section that resolved but yielded nothing. Page
+    misses and section-name misses raise inside the tool and never reach here,
+    which is why ``low`` means "parsed to nothing" rather than "not found".
+    """
+    structured = {
+        "source": "bulbapedia",
+        "rows": [{"move": "Blast Burn", "cost": "free"}],
+        "total_count": 56,
+        "confidence": "high",
+        "coverage_note": None,
+    }
+    ambiguous = {**structured, "confidence": "partial", "coverage_note": "2 sections are named…"}
+    nothing_parsed = {
+        "source": "bulbapedia",
+        "rows": [],
+        "total_count": 0,
+        "confidence": "low",
+        "coverage_note": "The section was found, but no rows could be parsed from it.",
+    }
+    for payload in (structured, ambiguous, nothing_parsed):
+        _check_source_not(_SOURCE_NOT, payload, _CONTEXT)
+
+
+def test_an_empty_wiki_section_may_not_claim_high_without_saying_why() -> None:
+    """The specific regression the closed waiver now catches.
+
+    A section that resolved and parsed to nothing is a gap in this server's
+    template coverage, not evidence that the page says nothing — and the
+    difference decides whether a caller re-reads the section or concludes the
+    item has no acquisition route at all.
+    """
+    with pytest.raises(AssertionError, match="nothing found, no coverage note"):
+        _check_source_not(
+            _SOURCE_NOT,
+            {
+                "source": "bulbapedia",
+                "rows": [],
+                "total_count": 0,
+                "confidence": "high",
+                "coverage_note": None,
+            },
+            _CONTEXT,
+        )
 
 
 def test_a_literal_source_not_value_is_a_plain_inequality() -> None:
@@ -339,6 +464,50 @@ def test_an_unsupported_assertion_key_is_rejected_loudly() -> None:
     """
     with pytest.raises(ValueError, match="unsupported assertion key"):
         check_case(_case(contain=[{"move": "flamethrower"}]), _payload())
+
+
+def test_not_contains_rejects_a_substring_that_is_present() -> None:
+    """The suite could not state an absence before this key existed.
+
+    PLAN.md §2's Earthquake question has a false premise — no Emerald tutor
+    teaches it, it is TM26 — so "the tutor list does not contain Earthquake" is
+    the fact under test, and every other assertion key grades what a response
+    *has*.
+    """
+    result = {"source": "bulbapedia", "rows": [{"move": "Swords Dance"}], "total_count": 1}
+    check_case(_case(not_contains=["Earthquake"]), result)
+
+    with pytest.raises(AssertionError, match="must not be"):
+        check_case(_case(not_contains=["Swords Dance"]), result)
+
+
+def test_not_contains_rejects_a_matching_row() -> None:
+    """Row-subset spelling, mirroring ``contains``.
+
+    Stronger than the substring form where a name appears legitimately elsewhere:
+    a tutor section could mention a move in prose without a tutor teaching it.
+    """
+    result = {
+        "source": "bulbapedia",
+        "rows": [{"move": "Rock Slide", "cost": "48 BP"}],
+        "total_count": 1,
+    }
+    check_case(_case(not_contains=[{"move": "Earthquake"}]), result)
+
+    with pytest.raises(AssertionError, match="row"):
+        check_case(_case(not_contains=[{"move": "Rock Slide"}]), result)
+
+
+def test_not_contains_is_not_satisfied_by_an_empty_result() -> None:
+    """Guard against the obvious false green: everything is absent from nothing.
+
+    Paired with a ``count`` in the real case, so an absence assertion can only
+    pass alongside evidence that the list it is absent *from* was populated.
+    """
+    empty = {"source": "bulbapedia", "rows": [], "total_count": 0}
+    check_case(_case(not_contains=["Earthquake"]), empty)
+    with pytest.raises(AssertionError, match="expected 30 rows"):
+        check_case(_case(not_contains=["Earthquake"], count=30), empty)
 
 
 def test_every_assertion_key_the_suite_uses_is_supported() -> None:
@@ -368,6 +537,26 @@ def test_fields_compares_booleans_and_null_by_identity() -> None:
     for wrong in (0, None, True):
         with pytest.raises(AssertionError, match="available_in_game"):
             check_case(denied, {"available_in_game": wrong})
+
+
+def test_fields_identity_rule_reads_the_actual_value_too_not_only_the_expectation() -> None:
+    """The mirror of the case above, which branching on ``expected`` alone misses.
+
+    ``_values_match`` keys its bool rule on either side; ``_check_fields`` used to
+    key on the expectation only, so ``fields: {total_count: 0}`` was satisfied by
+    an actual of ``False`` — the same ``False == 0`` defect, pointing the other
+    way. Pydantic's declared field types make that unreachable through a real
+    tool today, which is exactly why it needs a test: nothing else would notice
+    if the clause were dropped.
+    """
+    case = _case(fields={"total_count": 0})
+    check_case(case, {"total_count": 0})
+    with pytest.raises(AssertionError, match="total_count"):
+        check_case(case, {"total_count": False})
+
+    truthy = _case(fields={"total_count": 1})
+    with pytest.raises(AssertionError, match="total_count"):
+        check_case(truthy, {"total_count": True})
 
 
 def test_fields_still_compares_ordinary_values_by_equality() -> None:

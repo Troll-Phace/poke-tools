@@ -13,6 +13,30 @@ scaffold was tracked — `git checkout -- src/` silently no-opped and code revie
 through Phases 1–3 while the user verifies on their own time. The gate becomes BLOCKING at Phase 4,
 where the agent prompt and Skill need a working end-to-end loop.
 
+## ✅ CHERRY STUDIO WIRING VERIFIED (2026-08-06) — §3.1's open questions ANSWERED
+Live `server_info` from Cherry Studio v2.0.0 returned `database_present: true`,
+`database_path_source: "POKE_TOOLS_DB"`, `tool_count: 9`, correct tool names and supported_games.
+
+**§3.1 question 1 — `~/.cherrystudio/bin` on v2.0.0: CONFIRMED, it still holds.** Ships its own
+`uv` 0.11.16, `uvx`, `bun`, `mise`. Use `/Users/anthonygrimaldi/.cherrystudio/bin/uvx` as the command.
+
+**Working MCP entry (do not lose this):**
+```
+command: /Users/anthonygrimaldi/.cherrystudio/bin/uvx
+args:    --python 3.12 --from /Users/anthonygrimaldi/Documents/VSCode-Projects/poke-tools poke-tools-mcp
+env:     POKE_TOOLS_DB=/Users/anthonygrimaldi/Documents/VSCode-Projects/poke-tools/data/pokedex.sqlite
+```
+
+**⚠️ `--python 3.12` is REQUIRED and this is a real finding.** Without it `uvx` runs the package on
+**Python 3.14.6** despite the built wheel declaring `Requires-Python: >=3.12, <3.13`. Verified it
+survives `--refresh`, so it is not a stale cache — `uvx` simply does not honour that constraint for a
+local path source. All 662 tests run on 3.12.9, so omitting the pin makes the production launch path
+an untested interpreter. This is the Phase 0 reviewer's warning ("the pin governs your checkout only")
+confirmed in production.
+
+**Still open:** the "and uses the result" half — Qwen 3.8 answering a real data question end-to-end.
+`server_info` proves transport, tool discovery, and DB wiring; it does not prove tool *selection*.
+
 ## Orchestrator Decisions On Record
 - **`source` is data provenance only.** Removed from `ServerInfo` rather than widening §1.2's enum
   with a fifth `"local"` value. Server metadata has no provenance. The enum stays at exactly four
@@ -127,6 +151,30 @@ where the agent prompt and Skill need a working end-to-end loop.
 - [ ] 2.5 Coverage honesty built in, not retrofitted — Emerald 1,647 encounter rows vs HGSS 6,205
 - [ ] 2.6 test-engineer: light up the `where_to_find` feebas eval (`source_not: silently-empty`)
 - [ ] 2.7 **code-reviewer gate** (mandatory)
+
+## 🔥 CACHE POISONING ACROSS BUILDS — happened for real, 2026-08-06
+**The Phase 1a reviewer predicted this mechanism exactly, we built the guard, and it bit anyway.**
+
+What happened: an intermediate Phase 3 build wrote `wiki_cache` rows in one row format, stamped
+`PAYLOAD_VERSION "2"`. The corrected build stamped **the same "2"**. `wiki_lookup` returns a cache
+hit's payload verbatim, so live lookups kept serving the superseded format. Two agents measured the
+same response and got 9,470 B vs 5,914 B — neither was wrong; one was reading the cache, one the parser.
+
+**The guard catches version MISMATCHES, not format changes that reuse a version.** A row-format change
+without a bump leaves warm caches serving the old shape indefinitely, and every `contains`-style eval
+passes against either shape, so nothing goes red.
+
+**Discipline, now mandatory:**
+- Any change to `wiki/templates.py`'s row shape **must** bump `PAYLOAD_VERSION` — including mid-phase
+  iterations that never ship. An intermediate build's rows outlive the intermediate build.
+- `code-reviewer` must check the bump on every diff touching row construction. It is not inferable
+  from tests: they use fixtures, which have no cache.
+- When a wiki row format looks wrong in manual testing, **clear `wiki_cache` before concluding
+  anything**. `content` rows are regenerable; section indexes are keyed on revision id and safe.
+- Currently at `PAYLOAD_VERSION "3"` after the prevo + Gen III fixes.
+
+Open gap: nothing pins "a payload written by a different build under the same version" — the case that
+actually bit. Same-session round-trips are covered; cross-build poisoning is not.
 
 ## ⚠️ THE RECURRING FAILURE: GUARDS THAT STRUCTURALLY CANNOT FAIL
 Five instances so far, all found late, all after a green result created false confidence. **Before

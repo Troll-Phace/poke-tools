@@ -1,0 +1,420 @@
+{
+ "requested": "Garchomp (Pokémon)",
+ "title": "Garchomp (Pokémon)",
+ "revid": 4603140,
+ "size": 57806,
+ "sections": [
+  {
+   "index": "1",
+   "line": "Biology",
+   "level": 2
+  },
+  {
+   "index": "2",
+   "line": "Forms",
+   "level": 3
+  },
+  {
+   "index": "3",
+   "line": "Mega Garchomp",
+   "level": 4
+  },
+  {
+   "index": "4",
+   "line": "Mega Garchomp Z",
+   "level": 4
+  },
+  {
+   "index": "5",
+   "line": "Evolution",
+   "level": 3
+  },
+  {
+   "index": "6",
+   "line": "Game data",
+   "level": 2
+  },
+  {
+   "index": "7",
+   "line": "NPC appearances",
+   "level": 3
+  },
+  {
+   "index": "8",
+   "line": "In the core series",
+   "level": 4
+  },
+  {
+   "index": "9",
+   "line": "In the spin-off games",
+   "level": 4
+  },
+  {
+   "index": "10",
+   "line": "Pokédex entries",
+   "level": 3
+  },
+  {
+   "index": "11",
+   "line": "Game locations",
+   "level": 3
+  },
+  {
+   "index": "12",
+   "line": "In side games",
+   "level": 4
+  },
+  {
+   "index": "13",
+   "line": "In events",
+   "level": 4
+  },
+  {
+   "index": "14",
+   "line": "Pokémon Global Link promotions",
+   "level": 5
+  },
+  {
+   "index": "15",
+   "line": "Poké Portal News",
+   "level": 5
+  },
+  {
+   "index": "16",
+   "line": "Held items",
+   "level": 3
+  },
+  {
+   "index": "17",
+   "line": "Stats",
+   "level": 3
+  },
+  {
+   "index": "18",
+   "line": "Base stats",
+   "level": 4
+  },
+  {
+   "index": "19",
+   "line": "Garchomp",
+   "level": 5
+  },
+  {
+   "index": "20",
+   "line": "Mega Garchomp",
+   "level": 5
+  },
+  {
+   "index": "21",
+   "line": "Mega Garchomp Z",
+   "level": 5
+  },
+  {
+   "index": "22",
+   "line": "Pokéathlon stats",
+   "level": 4
+  },
+  {
+   "index": "23",
+   "line": "Type effectiveness",
+   "level": 3
+  },
+  {
+   "index": "24",
+   "line": "Garchomp and Mega Garchomp",
+   "level": 4
+  },
+  {
+   "index": "25",
+   "line": "Mega Garchomp Z",
+   "level": 4
+  },
+  {
+   "index": "26",
+   "line": "Learnset",
+   "level": 3
+  },
+  {
+   "index": "27",
+   "line": "By leveling up",
+   "level": 4
+  },
+  {
+   "index": "28",
+   "line": "By TM",
+   "level": 4
+  },
+  {
+   "index": "29",
+   "line": "By breeding",
+   "level": 4
+  },
+  {
+   "index": "30",
+   "line": "By a prior Evolution",
+   "level": 4
+  },
+  {
+   "index": "31",
+   "line": "Special moves",
+   "level": 4
+  },
+  {
+   "index": "32",
+   "line": "Side game data",
+   "level": 3
+  },
+  {
+   "index": "33",
+   "line": "Garchomp",
+   "level": 4
+  },
+  {
+   "index": "34",
+   "line": "Mega Garchomp",
+   "level": 4
+  },
+  {
+   "index": "35",
+   "line": "Form data",
+   "level": 3
+  },
+  {
+   "index": "36",
+   "line": "Mega Evolution",
+   "level": 4
+  },
+  {
+   "index": "37",
+   "line": "Evolution data",
+   "level": 3
+  },
+  {
+   "index": "38",
+   "line": "Sprites",
+   "level": 3
+  },
+  {
+   "index": "39",
+   "line": "In animation",
+   "level": 2
+  },
+  {
+   "index": "40",
+   "line": "Main series",
+   "level": 3
+  },
+  {
+   "index": "41",
+   "line": "Major appearances",
+   "level": 4
+  },
+  {
+   "index": "42",
+   "line": "Cynthia's Garchomp",
+   "level": 5
+  },
+  {
+   "index": "43",
+   "line": "Professor Sycamore's Garchomp",
+   "level": 5
+  },
+  {
+   "index": "44",
+   "line": "Other",
+   "level": 5
+  },
+  {
+   "index": "45",
+   "line": "Minor appearances",
+   "level": 4
+  },
+  {
+   "index": "46",
+   "line": "Pokédex entries",
+   "level": 4
+  },
+  {
+   "index": "47",
+   "line": "Pokémon Generations",
+   "level": 3
+  },
+  {
+   "index": "48",
+   "line": "Cynthia's Garchomp",
+   "level": 4
+  },
+  {
+   "index": "49",
+   "line": "Pokémon Masters Animated Trailer",
+   "level": 3
+  },
+  {
+   "index": "50",
+   "line": "Cynthia's Garchomp",
+   "level": 4
+  },
+  {
+   "index": "51",
+   "line": "A Ripple in Time",
+   "level": 3
+  },
+  {
+   "index": "52",
+   "line": "Cynthia's Garchomp",
+   "level": 4
+  },
+  {
+   "index": "53",
+   "line": "GOTCHA!",
+   "level": 3
+  },
+  {
+   "index": "54",
+   "line": "Cynthia's Garchomp",
+   "level": 4
+  },
+  {
+   "index": "55",
+   "line": "In the manga",
+   "level": 2
+  },
+  {
+   "index": "56",
+   "line": "Pokémon Ranger: The Comic – Shadows of Almia",
+   "level": 3
+  },
+  {
+   "index": "57",
+   "line": "Phantom Thief Pokémon 7",
+   "level": 3
+  },
+  {
+   "index": "58",
+   "line": "Pocket Monsters Diamond &amp; Pearl",
+   "level": 3
+  },
+  {
+   "index": "59",
+   "line": "Pocket Monsters Platinum: Aim to Be Battle King!!",
+   "level": 3
+  },
+  {
+   "index": "60",
+   "line": "Pocket Monsters XY: The Legend of the Pokémon Dragon King",
+   "level": 3
+  },
+  {
+   "index": "61",
+   "line": "Pokémon Adventures",
+   "level": 3
+  },
+  {
+   "index": "62",
+   "line": "Pokémon Battrio: Aim to be Battrio Master!",
+   "level": 3
+  },
+  {
+   "index": "63",
+   "line": "Pokémon Diamond and Pearl Adventure!",
+   "level": 3
+  },
+  {
+   "index": "64",
+   "line": "Pokémon Journeys",
+   "level": 3
+  },
+  {
+   "index": "65",
+   "line": "Pokémon Try Adventure",
+   "level": 3
+  },
+  {
+   "index": "66",
+   "line": "In the TCG",
+   "level": 2
+  },
+  {
+   "index": "67",
+   "line": "Other appearances",
+   "level": 2
+  },
+  {
+   "index": "68",
+   "line": "Super Smash Bros. for Wii U",
+   "level": 3
+  },
+  {
+   "index": "69",
+   "line": "Trophy information",
+   "level": 4
+  },
+  {
+   "index": "70",
+   "line": "Pokkén Tournament",
+   "level": 3
+  },
+  {
+   "index": "71",
+   "line": "Super Smash Bros. Ultimate",
+   "level": 3
+  },
+  {
+   "index": "72",
+   "line": "Pokémon UNITE",
+   "level": 3
+  },
+  {
+   "index": "73",
+   "line": "Trivia",
+   "level": 2
+  },
+  {
+   "index": "74",
+   "line": "Concept and development",
+   "level": 3
+  },
+  {
+   "index": "75",
+   "line": "Origin",
+   "level": 3
+  },
+  {
+   "index": "76",
+   "line": "Name origin",
+   "level": 4
+  },
+  {
+   "index": "77",
+   "line": "In other languages",
+   "level": 2
+  },
+  {
+   "index": "78",
+   "line": "Related articles",
+   "level": 2
+  },
+  {
+   "index": "79",
+   "line": "References",
+   "level": 2
+  },
+  {
+   "index": "80",
+   "line": "External links",
+   "level": 2
+  }
+ ],
+ "raw": null,
+ "parsetrees": {},
+ "prefix_search": {
+  "Garchomp (Pokémon)/": [
+   "Garchomp (Pokémon)/Champions learnset",
+   "Garchomp (Pokémon)/Generation IV learnset",
+   "Garchomp (Pokémon)/Generation V learnset",
+   "Garchomp (Pokémon)/Generation VII learnset",
+   "Garchomp (Pokémon)/Generation VI learnset",
+   "Garchomp (Pokémon)/Generation VIII learnset"
+  ]
+ }
+}

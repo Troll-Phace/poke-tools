@@ -1,0 +1,321 @@
+{
+ "requested": "Move Tutor",
+ "title": "Move Tutor",
+ "revid": 4515549,
+ "size": 58040,
+ "sections": [
+  {
+   "index": "1",
+   "line": "Generation I",
+   "level": 2
+  },
+  {
+   "index": "2",
+   "line": "Stadium (Japanese)",
+   "level": 3
+  },
+  {
+   "index": "3",
+   "line": "Stadium (English)",
+   "level": 3
+  },
+  {
+   "index": "4",
+   "line": "Generation II",
+   "level": 2
+  },
+  {
+   "index": "5",
+   "line": "Crystal",
+   "level": 3
+  },
+  {
+   "index": "6",
+   "line": "Generation III",
+   "level": 2
+  },
+  {
+   "index": "7",
+   "line": "FireRed and LeafGreen",
+   "level": 3
+  },
+  {
+   "index": "8",
+   "line": "Normal Move Tutors",
+   "level": 4
+  },
+  {
+   "index": "9",
+   "line": "Special Move Tutors",
+   "level": 4
+  },
+  {
+   "index": "10",
+   "line": "Emerald",
+   "level": 3
+  },
+  {
+   "index": "11",
+   "line": "Free Move Tutors",
+   "level": 4
+  },
+  {
+   "index": "12",
+   "line": "Battle Frontier Move Tutors",
+   "level": 4
+  },
+  {
+   "index": "13",
+   "line": "Pokémon XD",
+   "level": 3
+  },
+  {
+   "index": "14",
+   "line": "General Move Tutor",
+   "level": 4
+  },
+  {
+   "index": "15",
+   "line": "Mew Move Tutor",
+   "level": 4
+  },
+  {
+   "index": "16",
+   "line": "Generation IV",
+   "level": 2
+  },
+  {
+   "index": "17",
+   "line": "Diamond and Pearl",
+   "level": 3
+  },
+  {
+   "index": "18",
+   "line": "Platinum",
+   "level": 3
+  },
+  {
+   "index": "19",
+   "line": "Shard Move Tutors",
+   "level": 4
+  },
+  {
+   "index": "20",
+   "line": "HeartGold and SoulSilver",
+   "level": 3
+  },
+  {
+   "index": "21",
+   "line": "Free Move Tutors",
+   "level": 4
+  },
+  {
+   "index": "22",
+   "line": "Frontier Access Move Tutors",
+   "level": 4
+  },
+  {
+   "index": "23",
+   "line": "Generation V",
+   "level": 2
+  },
+  {
+   "index": "24",
+   "line": "Black and White",
+   "level": 3
+  },
+  {
+   "index": "25",
+   "line": "Black 2 and White 2",
+   "level": 3
+  },
+  {
+   "index": "26",
+   "line": "Free Move Tutors",
+   "level": 4
+  },
+  {
+   "index": "27",
+   "line": "Shard Move Tutors",
+   "level": 4
+  },
+  {
+   "index": "28",
+   "line": "Generation VI",
+   "level": 2
+  },
+  {
+   "index": "29",
+   "line": "X and Y",
+   "level": 3
+  },
+  {
+   "index": "30",
+   "line": "Omega Ruby and Alpha Sapphire",
+   "level": 3
+  },
+  {
+   "index": "31",
+   "line": "Free Move Tutors",
+   "level": 4
+  },
+  {
+   "index": "32",
+   "line": "Battle Resort Move Tutors",
+   "level": 4
+  },
+  {
+   "index": "33",
+   "line": "Generation VII",
+   "level": 2
+  },
+  {
+   "index": "34",
+   "line": "Sun and Moon",
+   "level": 3
+  },
+  {
+   "index": "35",
+   "line": "Ultra Sun and Ultra Moon",
+   "level": 3
+  },
+  {
+   "index": "36",
+   "line": "Free Move Tutors",
+   "level": 4
+  },
+  {
+   "index": "37",
+   "line": "Battle Point Move Tutors",
+   "level": 4
+  },
+  {
+   "index": "38",
+   "line": "Let's Go, Pikachu! and Let's Go, Eevee!",
+   "level": 3
+  },
+  {
+   "index": "39",
+   "line": "Generation VIII",
+   "level": 2
+  },
+  {
+   "index": "40",
+   "line": "Sword and Shield",
+   "level": 3
+  },
+  {
+   "index": "41",
+   "line": "Free Move Tutors",
+   "level": 4
+  },
+  {
+   "index": "42",
+   "line": "Pokémon Sword and Shield Expansion Pass",
+   "level": 4
+  },
+  {
+   "index": "43",
+   "line": "Brilliant Diamond and Shining Pearl",
+   "level": 3
+  },
+  {
+   "index": "44",
+   "line": "Legends: Arceus",
+   "level": 3
+  },
+  {
+   "index": "45",
+   "line": "In other games",
+   "level": 2
+  },
+  {
+   "index": "46",
+   "line": "PokéPark Wii: Pikachu's Adventure",
+   "level": 3
+  },
+  {
+   "index": "47",
+   "line": "Pokémon Super Mystery Dungeon",
+   "level": 3
+  },
+  {
+   "index": "48",
+   "line": "Pokémon Mystery Dungeon: Rescue Team DX",
+   "level": 3
+  },
+  {
+   "index": "49",
+   "line": "In animation",
+   "level": 2
+  },
+  {
+   "index": "50",
+   "line": "<i>Pokémon the Series</i>",
+   "level": 3
+  },
+  {
+   "index": "51",
+   "line": "<i>Pokémon the Series: Ruby and Sapphire</i>",
+   "level": 4
+  },
+  {
+   "index": "52",
+   "line": "<i>Pokémon the Series: Diamond and Pearl</i>",
+   "level": 4
+  },
+  {
+   "index": "53",
+   "line": "<i>Pokémon the Series: Sun &amp; Moon</i>",
+   "level": 4
+  },
+  {
+   "index": "54",
+   "line": "In the manga",
+   "level": 2
+  },
+  {
+   "index": "55",
+   "line": "Pokémon Adventures",
+   "level": 3
+  },
+  {
+   "index": "56",
+   "line": "<i>FireRed &amp; LeafGreen</i> arc",
+   "level": 4
+  },
+  {
+   "index": "57",
+   "line": "<i>Emerald</i> arc",
+   "level": 4
+  },
+  {
+   "index": "58",
+   "line": "<i>Black &amp; White</i> arc",
+   "level": 4
+  },
+  {
+   "index": "59",
+   "line": "<i>Omega Ruby &amp; Alpha Sapphire</i> arc",
+   "level": 4
+  },
+  {
+   "index": "60",
+   "line": "Trivia",
+   "level": 2
+  },
+  {
+   "index": "61",
+   "line": "In other languages",
+   "level": 2
+  }
+ ],
+ "raw": null,
+ "parsetrees": {
+  "20": "<root><h level=\"3\" i=\"1\">===HeartGold and SoulSilver===</h>\nThe following tutor moves are available in <template><title>game</title><part><name index=\"1\"/><value>HeartGold and SoulSilver</value></part><part><name index=\"2\"/><value>s</value></part></template>. Similar to Emerald, most of the moves that a Move Tutor can teach to a Pokémon require a set amount of Battle Points, these tutors being located in the [[Frontier Access]]. Fourteen of these moves are exclusive to HeartGold and SoulSilver, while the rest are also obtainable in Platinum.\n\n<h level=\"4\" i=\"2\">====Free Move Tutors====</h>\n<template lineStart=\"1\"><title>tutormv/header</title><part><name index=\"1\"/><value>hgss</value></part><part><name index=\"2\"/><value>none</value></part><part><name index=\"3\"/><value>yes</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Blast Burn</value></part><part><name index=\"2\"/><value>Fire</value></part><part><name>cat</name><equals>=</equals><value>Special</value></part><part><name>loc</name><equals>=</equals><value>[[Blackthorn City]]</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Draco Meteor</value></part><part><name index=\"2\"/><value>Dragon</value></part><part><name>cat</name><equals>=</equals><value>Special</value></part><part><name>loc</name><equals>=</equals><value>[[Blackthorn City]]</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Frenzy Plant</value></part><part><name index=\"2\"/><value>Grass</value></part><part><name>cat</name><equals>=</equals><value>Special</value></part><part><name>loc</name><equals>=</equals><value>[[Blackthorn City]]</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Headbutt</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>loc</name><equals>=</equals><value>[[Ilex Forest]]</value></part></template><comment>&lt;!--HGSS ex--&gt;</comment>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Hydro Cannon</value></part><part><name index=\"2\"/><value>Water</value></part><part><name>cat</name><equals>=</equals><value>Special</value></part><part><name>loc</name><equals>=</equals><value>[[Blackthorn City]]</value></part></template>\n|}\n|}\n\n<h level=\"4\" i=\"3\">====Frontier Access Move Tutors====</h>\n{| style=&quot;margin:auto&quot;\n| style=&quot;vertical-align:top&quot; |\n<template lineStart=\"1\"><title>tutormv/header</title><part><name index=\"1\"/><value>hgss</value></part><part><name index=\"2\"/><value>BP</value></part><part><name index=\"3\"/><value>no</value></part><part><name>disp</name><equals>=</equals><value>Top left</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Air Cutter</value></part><part><name index=\"2\"/><value>Flying</value></part><part><name>cat</name><equals>=</equals><value>Special</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Bug Bite</value></part><part><name index=\"2\"/><value>Bug</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>32</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Dive</value></part><part><name index=\"2\"/><value>Water</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>40</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Fire Punch</value></part><part><name index=\"2\"/><value>Fire</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>64</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Fury Cutter</value></part><part><name index=\"2\"/><value>Bug</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>32</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Ice Punch</value></part><part><name index=\"2\"/><value>Ice</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>64</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Icy Wind</value></part><part><name index=\"2\"/><value>Ice</value></part><part><name>cat</name><equals>=</equals><value>Special</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Knock Off</value></part><part><name index=\"2\"/><value>Dark</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>40</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Ominous Wind</value></part><part><name index=\"2\"/><value>Ghost</value></part><part><name>cat</name><equals>=</equals><value>Special</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Sucker Punch</value></part><part><name index=\"2\"/><value>Dark</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>40</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>ThunderPunch</value></part><part><name index=\"2\"/><value>Electric</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>64</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Trick</value></part><part><name index=\"2\"/><value>Psychic</value></part><part><name>cat</name><equals>=</equals><value>Status</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Vacuum Wave</value></part><part><name index=\"2\"/><value>Fighting</value></part><part><name>cat</name><equals>=</equals><value>Special</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Zen Headbutt</value></part><part><name index=\"2\"/><value>Psychic</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>64</value></part></template>\n|}\n|}\n|valign=top|\n<template lineStart=\"1\"><title>tutormv/header</title><part><name index=\"1\"/><value>hgss</value></part><part><name index=\"2\"/><value>BP</value></part><part><name index=\"3\"/><value>no</value></part><part><name>disp</name><equals>=</equals><value>Top right</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>AncientPower</value></part><part><name index=\"2\"/><value>Rock</value></part><part><name>cat</name><equals>=</equals><value>Special</value></part><part><name>bp</name><equals>=</equals><value>40</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Aqua Tail</value></part><part><name index=\"2\"/><value>Water</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>40</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Bounce</value></part><part><name index=\"2\"/><value>Flying</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>32</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Earth Power</value></part><part><name index=\"2\"/><value>Ground</value></part><part><name>cat</name><equals>=</equals><value>Special</value></part><part><name>bp</name><equals>=</equals><value>40</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Endeavor</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>64</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Gastro Acid</value></part><part><name index=\"2\"/><value>Poison</value></part><part><name>cat</name><equals>=</equals><value>Status</value></part><part><name>bp</name><equals>=</equals><value>32</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Gunk Shot</value></part><part><name index=\"2\"/><value>Poison</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>32</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Heat Wave</value></part><part><name index=\"2\"/><value>Fire</value></part><part><name>cat</name><equals>=</equals><value>Special</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Iron Defense</value></part><part><name index=\"2\"/><value>Steel</value></part><part><name>cat</name><equals>=</equals><value>Status</value></part><part><name>bp</name><equals>=</equals><value>40</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Iron Head</value></part><part><name index=\"2\"/><value>Steel</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>40</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Low Kick</value></part><part><name index=\"2\"/><value>Fighting</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>32</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Mud-Slap</value></part><part><name index=\"2\"/><value>Ground</value></part><part><name>cat</name><equals>=</equals><value>Special</value></part><part><name>bp</name><equals>=</equals><value>32</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Outrage</value></part><part><name index=\"2\"/><value>Dragon</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Pain Split</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>cat</name><equals>=</equals><value>Status</value></part><part><name>bp</name><equals>=</equals><value>64</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Rollout</value></part><part><name index=\"2\"/><value>Rock</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>32</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Seed Bomb</value></part><part><name index=\"2\"/><value>Grass</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>40</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Signal Beam</value></part><part><name index=\"2\"/><value>Bug</value></part><part><name>cat</name><equals>=</equals><value>Special</value></part><part><name>bp</name><equals>=</equals><value>40</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Sky Attack</value></part><part><name index=\"2\"/><value>Flying</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>64</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Super Fang</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>40</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Superpower</value></part><part><name index=\"2\"/><value>Fighting</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Twister</value></part><part><name index=\"2\"/><value>Dragon</value></part><part><name>cat</name><equals>=</equals><value>Special</value></part><part><name>bp</name><equals>=</equals><value>40</value></part></template>\n|}\n|}\n|valign=top|\n<template lineStart=\"1\"><title>tutormv/header</title><part><name index=\"1\"/><value>hgss</value></part><part><name index=\"2\"/><value>BP</value></part><part><name index=\"3\"/><value>no</value></part><part><name>disp</name><equals>=</equals><value>Bottom right</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Block</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>cat</name><equals>=</equals><value>Status</value></part><part><name>bp</name><equals>=</equals><value>32</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Gravity</value></part><part><name index=\"2\"/><value>Psychic</value></part><part><name>cat</name><equals>=</equals><value>Status</value></part><part><name>bp</name><equals>=</equals><value>32</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Heal Bell</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>cat</name><equals>=</equals><value>Status</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Helping Hand</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>cat</name><equals>=</equals><value>Status</value></part><part><name>bp</name><equals>=</equals><value>40</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Last Resort</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>cat</name><equals>=</equals><value>Physical</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Magic Coat</value></part><part><name index=\"2\"/><value>Psychic</value></part><part><name>cat</name><equals>=</equals><value>Status</value></part><part><name>bp</name><equals>=</equals><value>32</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Magnet Rise</value></part><part><name index=\"2\"/><value>Electric</value></part><part><name>cat</name><equals>=</equals><value>Status</value></part><part><name>bp</name><equals>=</equals><value>40</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Role Play</value></part><part><name index=\"2\"/><value>Psychic</value></part><part><name>cat</name><equals>=</equals><value>Status</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Snore</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>cat</name><equals>=</equals><value>Special</value></part><part><name>bp</name><equals>=</equals><value>32</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Spite</value></part><part><name index=\"2\"/><value>Ghost</value></part><part><name>cat</name><equals>=</equals><value>Status</value></part><part><name>bp</name><equals>=</equals><value>40</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>String Shot</value></part><part><name index=\"2\"/><value>Bug</value></part><part><name>cat</name><equals>=</equals><value>Status</value></part><part><name>bp</name><equals>=</equals><value>32</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Swift</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>cat</name><equals>=</equals><value>Special</value></part><part><name>bp</name><equals>=</equals><value>40</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Synthesis</value></part><part><name index=\"2\"/><value>Grass</value></part><part><name>cat</name><equals>=</equals><value>Status</value></part><part><name>bp</name><equals>=</equals><value>40</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Tailwind</value></part><part><name index=\"2\"/><value>Flying</value></part><part><name>cat</name><equals>=</equals><value>Status</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Uproar</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>cat</name><equals>=</equals><value>Special</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Worry Seed</value></part><part><name index=\"2\"/><value>Grass</value></part><part><name>cat</name><equals>=</equals><value>Status</value></part><part><name>bp</name><equals>=</equals><value>32</value></part></template>\n|}\n|}\n|}\n<template lineStart=\"1\"><title>-</title></template></root>",
+  "10": "<root><h level=\"3\" i=\"1\">===Emerald===</h>\nIn <template><title>game</title><part><name index=\"1\"/><value>Emerald</value></part></template>, various Move Tutors can be found across the [[Hoenn]] region. Some moves may be purchased at the <template><title>Gdis</title><part><name index=\"1\"/><value>Battle Frontier</value></part><part><name index=\"2\"/><value>III</value></part></template>. Those that cannot be purchased may only be learned once from the tutor.\n\n<h level=\"4\" i=\"2\">====Free Move Tutors====</h>\n<template lineStart=\"1\"><title>tutormv/header</title><part><name index=\"1\"/><value>emerald</value></part><part><name index=\"2\"/><value>none</value></part><part><name index=\"3\"/><value>yes</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Double-Edge</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>loc</name><equals>=</equals><value>[[Sootopolis City]]</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>DynamicPunch</value></part><part><name index=\"2\"/><value>Fighting</value></part><part><name>loc</name><equals>=</equals><value>[[Mossdeep City]]</value></part></template><comment>&lt;!--Emerald ex--&gt;</comment>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Explosion</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>loc</name><equals>=</equals><value>[[Pacifidlog Town]]</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Fury Cutter</value></part><part><name index=\"2\"/><value>Bug</value></part><part><name>loc</name><equals>=</equals><value>[[Verdanturf Town]]</value></part></template><comment>&lt;!--Emerald ex--&gt;</comment>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Metronome</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>loc</name><equals>=</equals><value>[[Fallarbor Town]]</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Mimic</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>loc</name><equals>=</equals><value>[[Lavaridge Town]]</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Rollout</value></part><part><name index=\"2\"/><value>Rock</value></part><part><name>loc</name><equals>=</equals><value>[[Mauville City]]</value></part></template><comment>&lt;!--Emerald ex--&gt;</comment>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Sleep Talk</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>loc</name><equals>=</equals><value>[[Fortree City]]</value></part></template><comment>&lt;!--Emerald ex--&gt;</comment>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Substitute</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>loc</name><equals>=</equals><value>[[Lilycove City]]</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Swagger</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>loc</name><equals>=</equals><value>[[Slateport City]]</value></part></template><comment>&lt;!--Emerald ex--&gt;</comment>\n|}\n|}\n\n<h level=\"4\" i=\"3\">====Battle Frontier Move Tutors====</h>\n{| style=&quot;margin:auto&quot;\n| style=&quot;vertical-align:top&quot; |\n<template lineStart=\"1\"><title>tutormv/header</title><part><name index=\"1\"/><value>emerald</value></part><part><name index=\"2\"/><value>BP</value></part><part><name index=\"3\"/><value>no</value></part><part><name>disp</name><equals>=</equals><value>Left Tutor</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Softboiled</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>bp</name><equals>=</equals><value>16</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Seismic Toss</value></part><part><name index=\"2\"/><value>Fighting</value></part><part><name>bp</name><equals>=</equals><value>24</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Dream Eater</value></part><part><name index=\"2\"/><value>Psychic</value></part><part><name>bp</name><equals>=</equals><value>24</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Mega Punch</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>bp</name><equals>=</equals><value>24</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Mega Kick</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Body Slam</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Rock Slide</value></part><part><name index=\"2\"/><value>Rock</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Counter</value></part><part><name index=\"2\"/><value>Fighting</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Thunder Wave</value></part><part><name index=\"2\"/><value>Electric</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Swords Dance</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n|}\n|}\n|\n<template lineStart=\"1\"><title>tutormv/header</title><part><name index=\"1\"/><value>emerald</value></part><part><name index=\"2\"/><value>BP</value></part><part><name index=\"3\"/><value>no</value></part><part><name>disp</name><equals>=</equals><value>Right Tutor</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Defense Curl</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>bp</name><equals>=</equals><value>16</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Snore</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>bp</name><equals>=</equals><value>24</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Mud-Slap</value></part><part><name index=\"2\"/><value>Ground</value></part><part><name>bp</name><equals>=</equals><value>24</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Swift</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>bp</name><equals>=</equals><value>24</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Icy Wind</value></part><part><name index=\"2\"/><value>Ice</value></part><part><name>bp</name><equals>=</equals><value>24</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Endure</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Psych Up</value></part><part><name index=\"2\"/><value>Normal</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Ice Punch</value></part><part><name index=\"2\"/><value>Ice</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>ThunderPunch</value></part><part><name index=\"2\"/><value>Electric</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Fire Punch</value></part><part><name index=\"2\"/><value>Fire</value></part><part><name>bp</name><equals>=</equals><value>48</value></part></template>\n|}\n|}\n|}</root>",
+  "60": "<root><h level=\"2\" i=\"1\">==Trivia==</h>\n* In Pokémon Platinum, there are exactly two [[shard]]-dependant tutorable moves for every type except <template><title>t</title><part><name index=\"1\"/><value>Normal</value></part></template>, which has six.\n* All of the tutorable moves in <template><title>2v2</title><part><name index=\"1\"/><value>FireRed</value></part><part><name index=\"2\"/><value>LeafGreen</value></part></template> (with the exception of the three moves taught at [[Cape Brink]]) were previously teachable via TM in [[Generation I]]. Similarly, all of the tutorable moves in <template><title>game</title><part><name index=\"1\"/><value>Emerald</value></part></template> and <template><title>Pokémon XD</title></template> (with the exception of the moves that can only be taught to <template><title>p</title><part><name index=\"1\"/><value>Mew</value></part></template>) were previously teachable via TM in [[Generation I]] and/or [[Generation II]].\n* All of the free Move Tutors in Sword and Shield became TMs in Scarlet and Violet.\n** Upon doing so, <template><title>p</title><part><name index=\"1\"/><value>Mew</value></part></template> can learn all of them from the TMs, when it couldn't from the tutors.</root>",
+  "4": "<root><h level=\"2\" i=\"1\">==Generation II==</h>\n<h level=\"3\" i=\"2\">===Crystal===</h>\n[[File:Move tutor.png|150px|right|thumb]]\nIn <template><title>game</title><part><name index=\"1\"/><value>Crystal</value></part></template>, [[Bill]]'s father can be visited outside the [[Goldenrod Game Corner]] every Wednesday and Saturday if the player has the [[Coin Case]] and has entered the [[Hall of Fame]]. He teaches three different moves for 4000 coins, two of which were [[TM]]s in [[Generation I]] and returned to that status in [[Generation III]], and one of which later became a TM with the other two. These moves are breedable in the same fashion as TMs and HMs. After teaching a move, he goes back inside the Game Corner to gamble while nursing a drink, and will not be able to teach another move until the next available day.\n\nThe Move Tutor's son, Bill, complains that he doesn't work and is a drain on the family. His wife describes him as a former <template><title>tc</title><part><name index=\"1\"/><value>Poké Maniac</value></part></template> who spends all his free time gambling.\n\n<template lineStart=\"1\"><title>tutormv/header</title><part><name index=\"1\"/><value>crystal</value></part><part><name index=\"2\"/><value>none</value></part><part><name index=\"3\"/><value>no</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Flamethrower</value></part><part><name index=\"2\"/><value>Fire</value></part><part><name>tm</name><equals>=</equals><value>—</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Ice Beam</value></part><part><name index=\"2\"/><value>Ice</value></part><part><name>tm</name><equals>=</equals><value>13</value></part></template>\n<template lineStart=\"1\"><title>tutormv</title><part><name index=\"1\"/><value>Thunderbolt</value></part><part><name index=\"2\"/><value>Electric</value></part><part><name>tm</name><equals>=</equals><value>24</value></part></template>\n|}\n|}</root>"
+ },
+ "prefix_search": {}
+}

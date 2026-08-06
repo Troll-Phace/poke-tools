@@ -107,10 +107,10 @@ async def test_initialize_reports_expected_identity(server_surface: dict[str, ob
     assert info.version == __version__
 
 
-#: Exactly what is registered at the end of Phase 2: the Phase 0 diagnostic, the
-#: four Tier 1 learnset/dex tools of Phase 1b, and Phase 2's four. Spelled out
-#: rather than counted so that *which* tools appeared is legible in the failure
-#: message, not just how many.
+#: Exactly what is registered at the end of Phase 3: the Phase 0 diagnostic, the
+#: four Tier 1 learnset/dex tools of Phase 1b, Phase 2's four, and Phase 3's
+#: ``wiki_lookup``. Spelled out rather than counted so that *which* tools
+#: appeared is legible in the failure message, not just how many.
 EXPECTED_TOOL_NAMES = [
     "can_learn",
     "find_pokemon",
@@ -121,6 +121,7 @@ EXPECTED_TOOL_NAMES = [
     "server_info",
     "type_matchup",
     "where_to_find",
+    "wiki_lookup",
 ]
 
 #: PLAN.md §0.4 fixes the tool budget at roughly ten: Qwen 3.8 degrades with a
@@ -133,18 +134,36 @@ EXPECTED_TOOL_NAMES = [
 #: ``get_move`` into ``get_learnset`` → ``type_matchup`` into ``team_check`` →
 #: ``export_team`` into ``team_check``).
 #:
-#: **Phase 2 leaves exactly one slot.** Nine registered against a ceiling of ten,
-#: with ``team_check``, ``export_team`` and ``wiki_lookup`` still to land. The
-#: guard below is therefore two assertions doing different jobs: an exact-count
-#: check so an unplanned tool is noticed at all, and a ``<= TOOL_BUDGET`` check
-#: that fires the moment the *ceiling itself* is crossed — the one that must not
-#: be satisfiable by simply bumping ``EXPECTED_TOOL_NAMES``.
+#: **Phase 3 leaves zero slots.** Ten registered against a ceiling of ten, with
+#: ``team_check`` and ``export_team`` still to land. The guard below is therefore
+#: two assertions doing different jobs: an exact-count check so an unplanned tool
+#: is noticed at all, and a ``<= TOOL_BUDGET`` check that fires the moment the
+#: *ceiling itself* is crossed — the one that must not be satisfiable by simply
+#: bumping ``EXPECTED_TOOL_NAMES``.
 TOOL_BUDGET = 10
 PLANNED_TOOL_COUNT_AT_FULL_BUILD = 12
 
-#: Tools still to be registered (PLAN.md §1.3), against the one remaining slot.
+#: Tools still to be registered (PLAN.md §1.3), against zero remaining slots.
 #: Pinned so the arithmetic that makes the budget urgent is asserted, not implied.
-UNBUILT_TOOL_NAMES = ["export_team", "team_check", "wiki_lookup"]
+UNBUILT_TOOL_NAMES = ["export_team", "team_check"]
+
+#: The tools that take a ``game`` argument, named rather than counted.
+#:
+#: ``wiki_lookup`` is the first tool with none — a Bulbapedia page is not scoped
+#: to a version group — and ``server_info`` reports on the install. Asserting
+#: ``len(EXPECTED_TOOL_NAMES) - 2`` would restate that fact as arithmetic that
+#: silently needs re-deriving every time a tool lands, and an off-by-N against a
+#: list length fails in a way that names no defect.
+GAME_ARG_TOOL_NAMES = {
+    "can_learn",
+    "find_pokemon",
+    "get_item",
+    "get_learnset",
+    "get_move",
+    "list_obtainable",
+    "type_matchup",
+    "where_to_find",
+}
 
 
 def _tools(server_surface: dict[str, object]) -> list:
@@ -156,7 +175,7 @@ def _tool_named(server_surface: dict[str, object], name: str):
     return tool
 
 
-async def test_lists_exactly_the_phase_2_tools(server_surface: dict[str, object]) -> None:
+async def test_lists_exactly_the_phase_3_tools(server_surface: dict[str, object]) -> None:
     """Registration is pinned to an exact set, not a floor.
 
     Phase 0 asserted ``== ["server_info"]`` for the same reason this asserts the
@@ -178,7 +197,7 @@ async def test_tool_count_stays_within_the_phase_budget(
     """
     tools = _tools(server_surface)
     assert len(tools) == len(EXPECTED_TOOL_NAMES), (
-        f"registered {len(tools)} tools, expected {len(EXPECTED_TOOL_NAMES)} for Phase 2. "
+        f"registered {len(tools)} tools, expected {len(EXPECTED_TOOL_NAMES)} for Phase 3. "
         "If this is a deliberate addition, update EXPECTED_TOOL_NAMES and check it against "
         f"the §0.4 budget of ~{TOOL_BUDGET}."
     )
@@ -191,14 +210,22 @@ async def test_tool_count_stays_within_the_phase_budget(
         "export_team into team_check) before registering more"
     )
     # Standing reminder that the full build is over budget, so the ladder has to be
-    # climbed before phases 3-4 finish rather than discovered at the end. Phase 2
-    # leaves one slot for three unbuilt tools: the arithmetic no longer works.
+    # climbed rather than discovered at the end.
     assert PLANNED_TOOL_COUNT_AT_FULL_BUILD > TOOL_BUDGET
     remaining_slots = TOOL_BUDGET - len(tools)
     assert remaining_slots < len(UNBUILT_TOOL_NAMES), (
-        f"{remaining_slots} slot(s) left for {len(UNBUILT_TOOL_NAMES)} unbuilt tools "
-        f"({', '.join(UNBUILT_TOOL_NAMES)}). If this assertion has gone green the surface "
-        "shrank, which means the §3.2 ladder was climbed — update this test to say so."
+        f"*** PLAN.md §3.2's consolidation ladder must be climbed in Phase 4. *** "
+        f"The surface is at {len(tools)} of {TOOL_BUDGET} with {remaining_slots} slot(s) left "
+        f"and {len(UNBUILT_TOOL_NAMES)} tools still unbuilt ({', '.join(UNBUILT_TOOL_NAMES)}). "
+        "Registering either one crosses §0.4's ceiling, which the check above will refuse. "
+        "The documented first rung is `server_info`: the orchestrator's decision on record is "
+        "that it counts against the budget and is the cheapest cut, because it is a Phase 0 "
+        "diagnostic rather than a data tool — dropping it frees a slot at no cost to the "
+        "team-building surface. The rungs after it are get_move into get_learnset (as a "
+        "`verbose` flag), then type_matchup into team_check, then export_team into team_check "
+        "(as a `format` argument), which lands the full build at eight. "
+        "If this assertion has gone green the surface shrank, which means the ladder was "
+        "climbed — update this test to say which rung."
     )
 
 
@@ -240,17 +267,33 @@ async def test_every_response_model_declares_a_source(server_surface: dict[str, 
 async def test_every_tool_carries_read_only_annotations(
     server_surface: dict[str, object],
 ) -> None:
-    """Nothing in this project mutates anything, and none of Tier 1 is open-world.
+    """Nothing in this project mutates anything, and exactly one tool is open-world.
 
-    Checked across the whole surface. ``open_world_hint=False`` is the one that
-    will eventually need care: ``wiki_lookup`` does hit the network, so when it
-    lands this test is the place that forces an explicit decision about it rather
-    than letting the annotation be copy-pasted along with everything else.
+    ``read_only_hint`` is uniform: no tool writes, and the pokédex connection is
+    opened ``mode=ro`` to make that structural rather than promised.
+
+    ``open_world_hint`` is **not** uniform, and this is the forcing point the
+    earlier version of this test anticipated. ``wiki_lookup`` reaches a live
+    external wiki whose content this project does not control, so it is ``True``;
+    the other nine answer from a fixed local database and are ``False``. Asserted
+    as a partition rather than as a blanket, so a *future* tool that quietly
+    opens a network call — the failure that matters, because it is invisible in
+    the response — fails here instead of inheriting a copy-pasted ``False``.
     """
+    open_world = set()
     for tool in _tools(server_surface):
         assert tool.annotations is not None, f"{tool.name} has no annotations"
         assert tool.annotations.read_only_hint is True, f"{tool.name} is not marked read-only"
-        assert tool.annotations.open_world_hint is False, f"{tool.name} is marked open-world"
+        if tool.annotations.open_world_hint:
+            open_world.add(tool.name)
+
+    assert open_world == {"wiki_lookup"}, (
+        f"exactly one tool reaches the network — Bulbapedia, via wiki_lookup — but "
+        f"{sorted(open_world)} are annotated open-world. A Tier 1 tool marked open-world is "
+        "mislabelled; a networked tool marked closed-world is worse, because the annotation "
+        "is the only place a caller can see that an answer left this machine."
+    )
+    assert "wiki_lookup" in {tool.name for tool in _tools(server_surface)}
 
 
 async def test_literal_arguments_reach_the_wire_as_closed_enums(
@@ -287,13 +330,13 @@ async def test_literal_arguments_reach_the_wire_as_closed_enums(
         "dark",
         "fairy",
     ]
-    saw_game = 0
+    saw_game: set[str] = set()
     saw: set[str] = set()
 
     for tool in _tools(server_surface):
         properties = tool.input_schema.get("properties", {})
         if "game" in properties:
-            saw_game += 1
+            saw_game.add(tool.name)
             assert properties["game"].get("enum") == games, (
                 f"{tool.name}'s `game` argument is not a closed enum on the wire"
             )
@@ -332,14 +375,163 @@ async def test_literal_arguments_reach_the_wire_as_closed_enums(
             )
             saw.add("type2")
 
-    assert saw_game == len(EXPECTED_TOOL_NAMES) - 1, (
-        f"every tool except server_info takes a `game` argument; only {saw_game} advertised one"
+    # The *set*, not a count against a list length. Which tools take a `game` is a
+    # fact about the surface; `len(EXPECTED_TOOL_NAMES) - N` is that fact restated
+    # as arithmetic that needs re-deriving every time a tool lands, and that fails
+    # naming no defect when it is not. `wiki_lookup` is the case that made the
+    # difference concrete: a Bulbapedia page is not scoped to a version group, so
+    # it is the first tool with no `game` at all.
+    assert saw_game == GAME_ARG_TOOL_NAMES, (
+        f"the set of tools advertising a closed `game` enum changed: "
+        f"missing {sorted(GAME_ARG_TOOL_NAMES - saw_game)}, "
+        f"unexpected {sorted(saw_game - GAME_ARG_TOOL_NAMES)}"
     )
+    assert GAME_ARG_TOOL_NAMES < set(EXPECTED_TOOL_NAMES)
+    assert set(EXPECTED_TOOL_NAMES) - GAME_ARG_TOOL_NAMES == {"server_info", "wiki_lookup"}
     # Asserted rather than assumed: an argument that got renamed or dropped would
     # otherwise make every check above vacuously pass by never matching.
     assert saw == {"methods", "method", "type1", "type2"}, (
         f"expected to check every enum-constrained argument; only saw {sorted(saw)}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Enum values must be named in prose as well as in the schema
+#
+# Observed in production, not theorised: Qwen 3.8 got `game` right first try and
+# `methods` wrong twice — trying "tm", then ["tm"], before finding "machine" —
+# and reported that the schema "doesn't show the enum". It does, but an
+# *optional* enum list serialises as `anyOf: [{items: {enum: [...]}}, {type:
+# null}]`, two levels below where the model reads. This is PLAN.md §0.4's
+# nested-schema warning arriving as a real failure.
+#
+# The fix is prose, and prose drifts from the thing it describes. Only
+# `PokemonType` is generated into its description from `get_args`; `LearnMethod`,
+# `MethodGroup` and `Game` are hand-written sentences, so for three of the four
+# enums nothing but this test stands between the schema and the prose.
+#
+# So the rule is pinned against the wire schema rather than against today's
+# strings: the test walks each argument for enums at *any* depth and requires
+# every value to appear in that argument's description. A `Literal` gaining a
+# value the description does not mention fails here, which is worth more than an
+# assertion on the exact sentence — the sentence may be rewritten, the coverage
+# may not.
+# ---------------------------------------------------------------------------
+
+#: The four ``Literal`` aliases that reach the wire as enums, and the argument
+#: each arrives as. Named so this file states *what* it is protecting rather than
+#: leaving it implicit in a set of argument names.
+_ENUM_ALIASES = {
+    "methods": "LearnMethod",
+    "method": "MethodGroup",
+    "type1": "PokemonType",
+    "type2": "PokemonType",
+    "game": "Game",
+}
+
+
+def _enum_values(schema: object) -> list[str]:
+    """Every enum value anywhere inside a JSON-Schema fragment, deduplicated."""
+    found: list[str] = []
+    if isinstance(schema, dict):
+        for value in schema.get("enum", []) or []:
+            if value not in found:
+                found.append(str(value))
+        for value in schema.values():
+            found += [v for v in _enum_values(value) if v not in found]
+    elif isinstance(schema, list):
+        for value in schema:
+            found += [v for v in _enum_values(value) if v not in found]
+    return found
+
+
+#: Arguments exempt from the rule below. **Empty, and it should stay that way.**
+#: ``game`` was briefly here: its description read "Only HeartGold/SoulSilver and
+#: Emerald are supported" while its enum values are ``'heartgold-soulsilver'``
+#: and ``'emerald'``, so the one argument ``server.py``'s docstring cited as
+#: working *because* its description spelled the values out was the one that did
+#: not. Every description is now generated from its ``Literal``, so nothing needs
+#: exempting — an entry appearing here again is a rule being bent, not a case
+#: being handled.
+_DESCRIPTION_EXEMPT: set[str] = set()
+
+
+async def test_every_enum_argument_names_its_values_in_its_description(
+    server_surface: dict[str, object],
+) -> None:
+    """*** Each enum value appears verbatim in the prose a small model reads. ***
+
+    Derived from the schema, so this fails the moment a ``Literal`` gains a value
+    its description was not updated for. That covers all four enums but matters
+    unequally:
+
+    * ``PokemonType``'s eighteen values are *generated* into the description from
+      ``get_args``, so they cannot drift while that generation stands. This test
+      is what protects the generation itself — it would pass just as happily
+      against a hand-typed list of the same eighteen, and would then start
+      failing the next time the enum changed, which is exactly the moment the
+      difference between generated and typed becomes visible.
+    * ``LearnMethod`` and ``MethodGroup`` are hand-written sentences that happen
+      to be accurate today. Nothing but this test keeps them that way.
+    """
+    checked: set[tuple[str, str]] = set()
+    problems: list[str] = []
+
+    for tool in _tools(server_surface):
+        for name, prop in (tool.input_schema.get("properties") or {}).items():
+            values = _enum_values(prop)
+            if not values or name in _DESCRIPTION_EXEMPT:
+                continue
+            description = (prop.get("description") or "").lower()
+            missing = [value for value in values if value.lower() not in description]
+            checked.add((tool.name, name))
+            if missing:
+                problems.append(f"{tool.name}.{name} omits {missing} from its description")
+
+    assert not problems, (
+        "an enum argument's description does not name every value it accepts. A model "
+        "reading only the prose will guess, and an optional enum's values sit two levels "
+        "down the schema where it may not look:\n" + "\n".join(problems)
+    )
+    # Asserted rather than assumed: a renamed argument would make the loop above
+    # vacuous by matching nothing at all. Derived from `_ENUM_ALIASES` minus the
+    # exemption, so adding an enum argument without covering it here fails.
+    assert {name for _, name in checked} == set(_ENUM_ALIASES) - _DESCRIPTION_EXEMPT, (
+        f"the set of enum arguments changed: {sorted({n for _, n in checked})}"
+    )
+
+
+async def test_the_game_argument_names_its_values_on_every_tool_that_takes_one(
+    server_surface: dict[str, object],
+) -> None:
+    """``game`` specifically, asserted across all nine tools that take it.
+
+    Separated from the sweep above because ``game`` is the argument with the most
+    ways to be guessed wrong — ``'hgss'``, ``'HeartGold'``, ``'heartgold_soulsilver'``
+    are all things a model reaching for the obvious spelling would try, and the
+    canonical value is a hyphenated compound that appears in no prose sentence
+    unless it is deliberately put there. It briefly was not: the description read
+    "Only HeartGold/SoulSilver and Emerald are supported", which names the games
+    and not the values, while ``server.py``'s own docstring cited ``game`` as the
+    example of the rule being followed.
+
+    Asserted per tool rather than once on the shared ``GameArg``, because what
+    reaches the model is the serialised schema of each tool.
+    """
+    seen: set[str] = set()
+    for tool in _tools(server_surface):
+        prop = (tool.input_schema.get("properties") or {}).get("game")
+        if prop is None:
+            continue
+        seen.add(tool.name)
+        description = (prop.get("description") or "").lower()
+        missing = [value for value in _enum_values(prop) if value.lower() not in description]
+        assert not missing, (
+            f"{tool.name}.game omits {missing} from its description. The values are "
+            "hyphenated compounds that no natural sentence contains by accident; "
+            "generate them from get_args(Game) rather than restating them in prose."
+        )
+    assert seen == GAME_ARG_TOOL_NAMES
 
 
 async def test_call_returns_structured_content_matching_schema(
