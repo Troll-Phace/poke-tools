@@ -281,17 +281,30 @@ def strip_comments(text: str) -> str:
     MediaWiki strips comments before it parses headings, so a commented-out
     ``== Held by ==`` is not a section: it is absent from the rendered page and
     from ``prop=sections``. The raw branch has to do the same or it computes
-    different boundaries from the section branch — which meant a slice that ended
-    *inside* a comment, and the comment's surviving lines parsed as real rows. The
+    different boundaries from the section branch, and it goes wrong in two
+    different directions. :func:`~poke_tools.wiki.sections.page_headings` reports
+    a section the wiki does not have, and requesting that name back **fabricates**
+    rows out of the commented-out template inside it; separately,
+    :func:`~poke_tools.wiki.sections.slice_section` treats the same heading as
+    closing the enclosing real section and **loses** the rows below it. The
     ``<!-- disabled pending verification … -->`` idiom around a template is common
-    enough on Bulbapedia to make that a routine fabrication rather than an edge
-    case.
+    enough on Bulbapedia to make both routine rather than edge cases.
+
+    Only the raw branch ever needed this. ``prop=parsetree`` emits comments as
+    ``<comment>`` elements, which both walkers drop on the
+    ``child.tag not in {"comment", "ext"}`` guard — in :func:`_element_text` and
+    again in :func:`parse_parsetree` — so the section branch has always computed
+    boundaries the way the wiki does; the raw branch is the sub-15 KB optimisation
+    of PLAN.md §0.1, and all three of this tier's fabrication bugs have lived
+    in it.
 
     The input is required to be a whole page, and that is what makes this exact:
     comments are balanced within one, so no partial ``<!--`` survives.
     :data:`_UNCLOSED_COMMENT` in :func:`scan_wikitext` stays as the backstop for
-    fragments that arrive already cut — parsetree sections, template bodies — and
-    is no longer the only thing standing between a comment and a row.
+    fragments that arrive already cut — parsetree sections, template bodies. On
+    the truncation path above it was already holding; what a line-level backstop
+    cannot do is put back rows a false boundary removed, or decline a section that
+    should not exist.
     """
     return _COMMENT.sub("", text)
 

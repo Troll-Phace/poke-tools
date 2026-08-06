@@ -24,8 +24,11 @@ values are upstream's to change and the structure is ours:
 
 from __future__ import annotations
 
+import importlib
 import json
 import re
+import sys
+from pathlib import Path
 
 import pytest
 
@@ -1501,10 +1504,22 @@ def test_the_payload_version_tracks_every_row_format_change() -> None:
 
     Now at ``"4"``. The bump was for a comment-unaware slicer: a commented-out
     ``== Held by ==`` closed a section early, so the slice ended *inside* the
-    comment and every line above that point came back as content. Rows cached
-    before the fix are wrong for any page containing a comment, which is most of
-    them — a textbook case of the old shape needing to be discarded rather than
-    migrated.
+    comment and every line above that point came back as content.
+
+    The affected pages are narrower than "any page containing a comment" — an
+    earlier draft of this docstring said that, and the fixture survey in
+    :func:`test_the_recorded_pages_cannot_exercise_a_comment_containing_structure`
+    disproves it: every comment on every recorded page is a bare inline marker
+    (``<!--tutor-->``, ``<!--prevo-->``) with no heading and no template. A
+    comment with no ``==`` heading inside it moves no boundary, and a comment
+    carrying no structural template contributes no phantom row; a page whose
+    comments are neither is parsed identically before and after the fix. What
+    the bump is right about is that the *set* of affected pages cannot be
+    computed from a cache key: whether a stored row is wrong depends on the
+    markup of the revision it came from, which the cache does not keep (PLAN.md
+    §6.7 — markup deliberately never persisted). Over-invalidating is the cheap
+    side of that trade, so the bump stands; the reason is "we cannot tell which
+    rows are bad", not "all of them are".
     """
     assert templates.PAYLOAD_VERSION == "4", (
         f"PAYLOAD_VERSION is now {templates.PAYLOAD_VERSION!r}. If a row's field set, "
@@ -1539,9 +1554,28 @@ def test_the_payload_version_tracks_every_row_format_change() -> None:
 #: scanning, comment stripping and inline rendering are all upstream of a builder
 #: and all of them decide what a row ends up saying, so all of them are hashed.
 #:
+#: **The membership is no longer maintained by hand.** Naming functions was the
+#: second attempt and it was still one hop too shallow — a named function's
+#: *callees* were not hashed, so ``_stable_repr`` reduced ``INLINE_RENDERERS`` to
+#: ``<callable _render_route>`` and the body that turns ``{{rt|34|Johto}}`` into a
+#: ``location`` could be rewritten without moving the digest. Worse,
+#: ``sections._drop_leading_heading`` decides whether a tutor row carries
+#: ``location`` at all — the "where do I get it" field PLAN.md §0.2 names as the
+#: entire justification for Tier 2 — and was unhashed. So
+#: :func:`test_every_reference_from_a_hashed_function_is_hashed_or_waived` walks
+#: the ``ast`` of everything listed here, collects the module-level names it
+#: touches, and fails unless each is itself listed or on :data:`_HASH_WAIVERS`.
+#: Adding a name below therefore drags its own dependencies under the guard, and
+#: the third instance of "we forgot one" becomes "we decided, here, with a
+#: reason".
+#:
 #: Still excluded, because they change *whether* an answer is fetched rather than
-#: what it says: the HTTP client, the cache, section name resolution, and the
-#: tool layer.
+#: what it says: the HTTP client, the cache, section *name resolution*
+#: (``find_section``, ``normalize_section_name``, ``_subpage_hint``) and the tool
+#: layer. None of those is reachable from a hashed function, so the walk keeps
+#: them out on its own rather than by an exclusion anybody has to remember —
+#: ``fetch_section``, which is the one function that touches the client, is
+#: deliberately not a root.
 _ROW_SHAPE_FUNCTIONS = (
     # Row builders and the dispatch into them.
     "build_rows",
@@ -1570,15 +1604,46 @@ _ROW_SHAPE_FUNCTIONS = (
     "parse_template_body",
     "_split_top_level",
     "_match_braces",
+    "_element_text",
+    "_template_from_element",
     # Rendering, which decides a field's literal text as surely as the layout
     # tables decide which field it is.
     "render_inline",
     "render_nodes",
+    "render_wikitext",
     "_node_text",
     "clean_markup",
     "tidy",
     "_wikilink",
     "expand_game_code",
+    # The per-template renderers `INLINE_RENDERERS` dispatches to. Named
+    # individually because `_stable_repr` reduces the table's values to
+    # `<callable _render_route>` — the name, never the body — so hashing the
+    # table pins *which* renderer runs and nothing about what it emits.
+    # `_render_route` alone decides whether a location reads "Route 34 (Johto)".
+    "_first",
+    "_last",
+    "_render_default",
+    "_render_gameabbrev",
+    "_render_sup",
+    "_render_route",
+    "_render_route_number",
+    "_render_shadow",
+    "_render_dl",
+    "_render_msp",
+    "_render_color",
+    "_render_empty",
+)
+
+#: The node types every builder reads its fields out of. ``TemplateCall.arg`` is
+#: the single accessor behind every positional lookup in every layout table, so
+#: an off-by-one there moves every column on every row at once — the ``prevo``
+#: defect, generalised. ``Heading.level`` is what
+#: ``sections._drop_leading_heading`` compares.
+_ROW_SHAPE_CLASSES = (
+    "TemplateCall",
+    "Heading",
+    "TextRun",
 )
 _ROW_SHAPE_TABLES = (
     "_BUILDERS",
@@ -1605,6 +1670,26 @@ _ROW_SHAPE_TABLES = (
     "_RESIDUAL_MARKUP",
     "_HEADING_MARKUP",
     "_PARAMETER_OPEN",
+    # Reached from a hashed function and able to change a field's literal text or
+    # a cell's boundaries. Added by the callee walk, not by inspection.
+    "_REF",
+    "_BREAK",
+    "_HTML_TAG",
+    "_QUOTES",
+    "_WIKILINK",
+    "_EXTLINK",
+    "_WHITESPACE",
+    "_SEMICOLONS",
+    "_SPACE_BEFORE_PUNCTUATION",
+    "_DECORATIVE_NAMESPACES",
+    "_INTERLANGUAGE_LINK",
+    "_NAMED_ARG",
+    "_TABLE_END",
+    "_ROW_BREAK",
+    "_CELL",
+    "_SCAFFOLDING_LINE",
+    "_CELL_MARKER",
+    "_ATTRIBUTE",
 )
 
 #: The page-slicing half, in :mod:`poke_tools.wiki.sections`. A section boundary
@@ -1618,11 +1703,72 @@ _SLICE_SHAPE_FUNCTIONS = (
     "page_headings",
     "slice_section",
     "_heading_text",
+    # Not a slicer but the last thing to touch the node stream before
+    # `build_rows` sees it, and the reviewer's demonstration of why one hop is
+    # not enough: dropping one heading too many strips the subheading that
+    # `_tutor_venue` reads, and every Emerald Battle Frontier row comes back with
+    # a move and a price and no `location`. Pinned in
+    # `test_a_bad_drop_of_the_leading_heading_loses_the_venue_and_moves_the_digest`.
+    "_drop_leading_heading",
 )
+_SLICE_SHAPE_CLASSES = ("ResolvedSection",)
+
+#: The regex that *defines what a heading is*, on the raw branch. Move a
+#: character of it and `slice_section` computes different boundaries, which is
+#: precisely the change that produced the ``"4"`` bump. It was unhashed while
+#: ``templates._COMMENT`` and ``_HEADING_MARKUP`` — its two counterparts — were
+#: both hashed, which is how a gap of this kind looks from the inside: not an
+#: oversight anyone could defend, just one nobody's eye landed on.
+_SLICE_SHAPE_TABLES = ("_HEADING_LINE",)
+
+#: Module-level names a hashed function may reference *without* being hashed, and
+#: why each cannot change a stored row. The waiver list is the point of the walk:
+#: it turns "we forgot" into "we decided", in a form a reviewer can read and
+#: disagree with. Anything not here and not hashed fails
+#: :func:`test_every_reference_from_a_hashed_function_is_hashed_or_waived`.
+_HASH_WAIVERS = {
+    # Standard library and typing. Not ours to change; a Python upgrade that
+    # altered `re` semantics is not a defect this digest could usefully report.
+    "re": "stdlib; not editable in this repo",
+    "html": "stdlib; `html.unescape` only",
+    "ElementTree": "stdlib XML parser",
+    "field": "dataclasses.field, used for a default_factory",
+    "dataclass": "stdlib decorator on the hashed node classes; `frozen=True` is in their source",
+    "Sequence": "typing-only, erased at runtime",
+    "Iterator": "typing-only, erased at runtime",
+    "Iterable": "typing-only, erased at runtime",
+    "Mapping": "typing-only, erased at runtime",
+    # Type aliases. `Row = dict[str, object]` and `Node = TextRun | Heading |
+    # TemplateCall` appear only in annotations and carry no behaviour; the three
+    # classes behind `Node` are hashed individually in `_ROW_SHAPE_CLASSES`.
+    # `RowKind` is a `Literal`, and the two places a row kind is actually chosen
+    # — `_BUILDERS` and `ROW_KIND_TEXT` — are both hashed as data.
+    "Row": "type alias, annotation-only",
+    "Node": "type alias; its three member classes are hashed",
+    "RowKind": "Literal alias; the values stored come from _BUILDERS/ROW_KIND_TEXT, both hashed",
+    # `sections` reaches into `templates` by module reference. Hashing the module
+    # object itself would drag in the client and the cache, which change *whether*
+    # an answer is fetched rather than what it says. What makes that safe is not
+    # this line: `_module_level_references` now expands `templates.<attr>` into an
+    # edge of its own, so each member reached through the module is checked
+    # against the hashed surface individually, every run. The reason below states
+    # the mechanism rather than asserting the outcome — a waiver whose claim
+    # nothing re-derives is the comment this walk replaced.
+    "templates": "module object; each `templates.<attr>` edge is walked and checked separately",
+}
 
 #: The digest of all of the above, as of ``PAYLOAD_VERSION = "4"``. Checked in by
 #: hand: see :func:`test_the_row_shape_digest_is_pinned_to_the_payload_version`.
-_ROW_SHAPE_DIGEST = "11d961fc3dd04a5c"
+#:
+#: Last moved when the *surface* widened rather than when the code did — the
+#: callee walk added the renderers, ``_drop_leading_heading`` and
+#: ``_HEADING_LINE``, and nothing under ``src/`` changed in that pass. So
+#: ``PAYLOAD_VERSION`` stayed at ``"4"``: rows cached by the previous build were
+#: built by identical code and remain correct. That is the one case where
+#: updating this pin without a bump is right, and it is worth naming, because
+#: "the digest moved but the version did not" is otherwise exactly the shape of
+#: the mistake this pair of tests exists to catch.
+_ROW_SHAPE_DIGEST = "caff239d297b3212"
 
 
 def _normalised_source(source: str) -> str:
@@ -1679,16 +1825,95 @@ def _row_shape_digest() -> str:
 
     parts = [
         f"def {name}\n{_normalised_source(inspect.getsource(getattr(templates, name)))}"
-        for name in _ROW_SHAPE_FUNCTIONS
+        for name in (*_ROW_SHAPE_FUNCTIONS, *_ROW_SHAPE_CLASSES)
     ]
     parts += [
         f"slice {name}\n{_normalised_source(inspect.getsource(getattr(sections, name)))}"
-        for name in _SLICE_SHAPE_FUNCTIONS
+        for name in (*_SLICE_SHAPE_FUNCTIONS, *_SLICE_SHAPE_CLASSES)
     ]
     parts += [
         f"data {name}\n{_stable_repr(getattr(templates, name))}" for name in _ROW_SHAPE_TABLES
     ]
+    parts += [
+        f"slice data {name}\n{_stable_repr(getattr(sections, name))}"
+        for name in _SLICE_SHAPE_TABLES
+    ]
     return hashlib.sha256("\n\n".join(parts).encode()).hexdigest()[:16]
+
+
+def _module_level_references(module: object, name: str) -> set[str]:
+    """Module-level names the source of ``module.name`` reads.
+
+    Everything bound *inside* the function — parameters, assignments,
+    comprehension targets, ``for`` targets — is subtracted first, so a local
+    called ``section`` is not mistaken for the module attribute of that name.
+    What survives is the set of things the function reaches out of its own scope
+    to touch, which is exactly the set the guard has to follow.
+
+    **Qualified cross-module calls count as edges of their own.** ``sections``
+    reaches ``templates`` by module reference, so ``templates.strip_comments``
+    parses as ``Attribute(value=Name('templates'))`` and a ``Name``-only walk
+    collects exactly one thing from it: ``templates``. That single opaque edge
+    was then waived, with the written claim that "the members reached through it
+    are hashed individually" — true when written, and checked by nothing, which
+    is structurally the same unverified comment the walk was built to replace.
+    Add ``templates._normalise_venue`` and call it that way from a slicer and the
+    helper is unhashed, the walk stays green, the digest does not move, and a
+    ``location`` changes under a warm cache. So an ``Attribute`` whose base is a
+    ``Name`` bound to a module *inside this package* contributes
+    ``"<module>.<attr>"``, and the waiver's claim becomes a thing the walk
+    re-derives on every run. Pinned in
+    :func:`test_the_walk_sees_a_cross_module_qualified_call`.
+
+    Stdlib bases (``re.compile``, ``html.unescape``, ``ElementTree.fromstring``)
+    are deliberately not expanded: they are not editable in this repo, which is
+    the reason their bare module names are waived already. The base ``Name``
+    itself is still reported, so those waivers stay live rather than turning into
+    dead text.
+    """
+    import ast
+    import inspect
+    import textwrap
+
+    tree = ast.parse(textwrap.dedent(inspect.getsource(getattr(module, name))))
+    bound: set[str] = set()
+    read: set[str] = set()
+    attributes: list[ast.Attribute] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name):
+            (bound if isinstance(node.ctx, ast.Store | ast.Del) else read).add(node.id)
+        elif isinstance(node, ast.arg):
+            bound.add(node.arg)
+        elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+            bound.add(node.name)
+        elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+            attributes.append(node)
+    # The definition itself is bound by its own name; its recursive self-calls
+    # are not a dependency on anything the guard could separately miss.
+    bound.add(name)
+
+    references = {reference for reference in read - bound if hasattr(module, reference)}
+    for node in attributes:
+        base = node.value
+        assert isinstance(base, ast.Name)  # narrowed at collection; repeated for the type checker
+        if base.id in bound:
+            continue
+        target = getattr(module, base.id, None)
+        if not inspect.ismodule(target) or not _is_guarded_module(target):
+            continue
+        if hasattr(target, node.attr):
+            references.add(f"{target.__name__.rpartition('.')[2]}.{node.attr}")
+    return references
+
+
+def _is_guarded_module(candidate: object) -> bool:
+    """Is *candidate* a module this repo can edit, and so one the walk must follow?
+
+    The test is package membership rather than an allow-list of two names, so a
+    third module added to :mod:`poke_tools.wiki` is followed the day someone
+    calls into it, not the day someone remembers to list it here.
+    """
+    return getattr(candidate, "__name__", "").startswith("poke_tools.")
 
 
 def test_the_row_shape_digest_is_pinned_to_the_payload_version() -> None:
@@ -1776,6 +2001,147 @@ def _row(**fields: object) -> Row:
     )
 
 
+# ---------------------------------------------------------------------------
+# Mutation tests: the three gaps the callee walk closed, executed rather than
+# argued. `_row_shape_digest` reads its inputs through `getattr` at call time and
+# takes function sources through `inspect.getsource`, so substituting a
+# module attribute with a replacement defined here is enough to show the digest
+# following a real edit — no source rewriting, and nothing the digest could
+# special-case.
+# ---------------------------------------------------------------------------
+
+
+def _drop_every_leading_node(nodes: list[templates.Node], section: object) -> list[templates.Node]:
+    """The mutation: drop the first node unconditionally, level check gone.
+
+    Written the way the real edit would be — "the first node is always the
+    section's own heading, so why check the level" — rather than as obvious
+    sabotage. It is wrong on the section branch, where a level-4 subsection
+    heading follows a level-3 section's prose.
+    """
+    return nodes[1:] if nodes else nodes
+
+
+def test_a_bad_drop_of_the_leading_heading_loses_the_venue_and_moves_the_digest(
+    client: FixtureClient,
+) -> None:
+    """*** Both halves for ``_drop_leading_heading``: it matters, and it is now guarded. ***
+
+    ``sections._drop_leading_heading`` was outside the hashed surface for two
+    passes, on the reading that it "drops a heading" rather than builds a row.
+    What it actually decides is whether a tutor row keeps ``location`` — the
+    "where do I get it" field PLAN.md §0.2 names as the entire justification for
+    Tier 2 existing. A row that has kept its move and its price and lost its
+    place still looks complete.
+
+    The mutated row below is not hypothetical arithmetic: it is the real recorded
+    ``Move Tutor`` § ``Emerald`` node stream, taken from the "Battle Frontier
+    Move Tutors" subheading, run through :func:`templates.build_rows` twice.
+    """
+    revision = client.revision("Move Tutor")
+    section = sections.find_section(client.section_list(revision), "Emerald")
+    nodes = templates.parse_parsetree(client.section_parsetree(revision, section.index))
+    venue = next(
+        index
+        for index, node in enumerate(nodes)
+        if isinstance(node, templates.Heading) and "Battle Frontier" in node.text
+    )
+    subsection = nodes[venue:]
+
+    _, kept = templates.build_rows(sections._drop_leading_heading(subsection, section))
+    _, dropped = templates.build_rows(_drop_every_leading_node(subsection, section))
+
+    # The subheading is level 4 under a level-3 section, so the real function
+    # keeps it — and the venue comes out of it.
+    assert kept[0] == {
+        "move": "Softboiled",
+        "type": "normal",
+        "cost": "16 BP",
+        "location": "Battle Frontier",
+        "group": "Left Tutor",
+    }
+    assert "location" not in dropped[0], (
+        "the mutation was supposed to eat the venue subheading; if the location survives it "
+        "is coming from somewhere else and this test proves nothing"
+    )
+    assert dropped[0]["move"] == "Softboiled" and dropped[0]["cost"] == "16 BP", (
+        "the mutated row still reads as a complete answer — which is why losing the venue "
+        "silently is the dangerous shape of this bug"
+    )
+
+    # And the guard now sees the edit.
+    before = _row_shape_digest()
+    original = sections._drop_leading_heading
+    try:
+        sections._drop_leading_heading = _drop_every_leading_node  # type: ignore[assignment]
+        assert _row_shape_digest() != before, (
+            "_drop_leading_heading can be rewritten without moving the digest"
+        )
+    finally:
+        sections._drop_leading_heading = original  # type: ignore[assignment]
+    assert _row_shape_digest() == before
+
+
+def _render_route_mutated(call: templates.TemplateCall) -> str:
+    """The mutation: region dropped, so ``Route 34 (Johto)`` becomes ``Route 34``."""
+    return f"Route {call.arg(1)}" if call.arg(1) else ""
+
+
+def test_an_inline_renderer_body_moves_the_digest_and_the_rendered_field() -> None:
+    """*** Why naming a renderer in a hashed *table* was not enough. ***
+
+    ``INLINE_RENDERERS`` is hashed, but :func:`_stable_repr` can only reduce a
+    function object to something process-stable, and what it can stably say is
+    the name — ``<callable _render_route>``. So the table pins that ``{{rt|…}}``
+    still dispatches to ``_render_route`` and says nothing about what that
+    function emits. Every ``location`` on every encounter-style row goes through
+    one of these.
+
+    Both halves again: the mutation changes a stored value, and the digest now
+    notices. The second assertion is the one that failed before this pass.
+    """
+    call = templates.parse_template_body("rt|34|Johto")
+    assert templates.render_inline(call) == "Route 34 (Johto)"
+
+    before = _row_shape_digest()
+    original = templates._render_route
+    try:
+        templates._render_route = _render_route_mutated  # type: ignore[assignment]
+        templates.INLINE_RENDERERS["rt"] = _render_route_mutated
+        assert templates.render_inline(call) == "Route 34", (
+            "the renderer table is not what decides a rendered location after all"
+        )
+        assert _row_shape_digest() != before, (
+            "a renderer body can be rewritten without moving the digest; INLINE_RENDERERS "
+            "pins only the name"
+        )
+    finally:
+        templates._render_route = original  # type: ignore[assignment]
+        templates.INLINE_RENDERERS["rt"] = original
+    assert _row_shape_digest() == before
+
+
+def test_changing_what_counts_as_a_heading_moves_the_digest() -> None:
+    """``sections._HEADING_LINE`` defines a section boundary, and was unhashed.
+
+    Its two counterparts in :mod:`templates` — ``_COMMENT`` and
+    ``_HEADING_MARKUP`` — were both hashed from the start. This one was not, while
+    being the regex that decides where :func:`sections.slice_section` cuts: the
+    exact class of change that produced the ``"4"`` bump.
+    """
+    before = _row_shape_digest()
+    original = sections._HEADING_LINE
+    try:
+        # `={2,6}` → `={3,6}`: `== Acquisition ==` stops being a heading at all.
+        sections._HEADING_LINE = re.compile(r"^(={3,6})\s*(.*?)\s*\1\s*$")
+        assert _row_shape_digest() != before, (
+            "the definition of a heading can change without moving the digest"
+        )
+    finally:
+        sections._HEADING_LINE = original
+    assert _row_shape_digest() == before
+
+
 def test_the_hashed_surface_names_only_things_that_exist() -> None:
     """A typo in either tuple would silently shrink what is guarded.
 
@@ -1783,20 +2149,26 @@ def test_the_hashed_surface_names_only_things_that_exist() -> None:
     fewer function, and the counts are asserted so that *deleting* a name to make
     a failing digest go away is visible as a diff in this file.
     """
-    for name in (*_ROW_SHAPE_FUNCTIONS, *_ROW_SHAPE_TABLES):
+    for name in (*_ROW_SHAPE_FUNCTIONS, *_ROW_SHAPE_CLASSES, *_ROW_SHAPE_TABLES):
         assert hasattr(templates, name), f"{name!r} is hashed but no longer exists"
-    for name in _SLICE_SHAPE_FUNCTIONS:
+    for name in (*_SLICE_SHAPE_FUNCTIONS, *_SLICE_SHAPE_CLASSES, *_SLICE_SHAPE_TABLES):
         assert hasattr(sections, name), f"{name!r} is hashed but no longer exists"
-    assert len(_ROW_SHAPE_FUNCTIONS) == 30
-    assert len(_SLICE_SHAPE_FUNCTIONS) == 3
-    assert len(_ROW_SHAPE_TABLES) == 24
+    assert len(_ROW_SHAPE_FUNCTIONS) == 45
+    assert len(_ROW_SHAPE_CLASSES) == 3
+    assert len(_SLICE_SHAPE_FUNCTIONS) == 4
+    assert len(_SLICE_SHAPE_CLASSES) == 1
+    assert len(_ROW_SHAPE_TABLES) == 42
+    assert len(_SLICE_SHAPE_TABLES) == 1
     assert all(callable(getattr(templates, name)) for name in _ROW_SHAPE_FUNCTIONS)
     assert all(callable(getattr(sections, name)) for name in _SLICE_SHAPE_FUNCTIONS)
 
     # The slicer is named explicitly, because omitting it is not hypothetical:
-    # the first version of this guard did, and missed the `"4"` bump.
+    # the first version of this guard did, and missed the `"4"` bump. So is
+    # `_drop_leading_heading`, which the second version omitted.
     assert "strip_comments" in _ROW_SHAPE_FUNCTIONS
     assert "slice_section" in _SLICE_SHAPE_FUNCTIONS
+    assert "_drop_leading_heading" in _SLICE_SHAPE_FUNCTIONS
+    assert "_HEADING_LINE" in _SLICE_SHAPE_TABLES
 
     # Every builder in the dispatch table is hashed. This is the one membership
     # that cannot be left to review: a new row kind is a new row shape.
@@ -1804,6 +2176,362 @@ def test_the_hashed_surface_names_only_things_that_exist() -> None:
         assert builder.__name__ in _ROW_SHAPE_FUNCTIONS, (
             f"{builder.__name__} builds rows but is not in the hashed surface"
         )
+
+
+#: The roots the callee walk starts from: everything hashed *by source*. Data
+#: tables are not roots — a regex has no callees — but they are legitimate
+#: destinations, so they appear in :func:`_hashed_names` and not here.
+_WALK_ROOTS = (
+    (templates, (*_ROW_SHAPE_FUNCTIONS, *_ROW_SHAPE_CLASSES)),
+    (sections, (*_SLICE_SHAPE_FUNCTIONS, *_SLICE_SHAPE_CLASSES)),
+)
+
+
+def _unguarded_references(
+    hashed: set[str],
+    waived: set[str],
+    roots: tuple[tuple[object, tuple[str, ...]], ...] = _WALK_ROOTS,
+) -> list[str]:
+    """Every module-level name a hashed root reads that is neither hashed nor waived.
+
+    Taking the sets *and the roots* as arguments rather than reading the module
+    globals is what lets the two control tests run the walk against a
+    deliberately incomplete surface and against a deliberately defective module.
+    A guard whose failure path is never executed is the same shape of unchecked
+    control as the review checklist this one replaced.
+
+    Waivers match on the last dotted component, so ``re`` excuses both ``re`` and
+    a qualified ``templates.re``. The waiver list states things about *names* —
+    "stdlib", "annotation-only" — and none of its entries is a claim that holds
+    in one module and not the other.
+    """
+    unguarded: list[str] = []
+    for module, names in roots:
+        for name in names:
+            for reference in sorted(_module_level_references(module, name)):
+                if reference in hashed or reference.rpartition(".")[2] in waived:
+                    continue
+                unguarded.append(f"{module.__name__}.{name} -> {reference}")
+    return unguarded
+
+
+def _hashed_names() -> set[str]:
+    """The guarded surface, in both the bare and the module-qualified spelling.
+
+    A reference arrives bare when a function reads a name out of its own module
+    and qualified when it reaches across one, so both spellings have to satisfy
+    membership. The set stays flat across the two modules — a name hashed in
+    ``templates`` would satisfy a bare same-named reference in ``sections``. That
+    is a real limit and not one worth closing by attribution: ``sections`` does
+    ``from poke_tools.wiki.templates import Heading, Node``, so those objects are
+    module-level attributes of *both* modules and any single-owner rule labels
+    one of the two wrongly. The collision needs two same-named module-level
+    objects across the two files, of which there are none; the cross-module
+    edges, where a wrong attribution could actually mislead, are qualified.
+    """
+    templates_names = (*_ROW_SHAPE_FUNCTIONS, *_ROW_SHAPE_CLASSES, *_ROW_SHAPE_TABLES)
+    sections_names = (*_SLICE_SHAPE_FUNCTIONS, *_SLICE_SHAPE_CLASSES, *_SLICE_SHAPE_TABLES)
+    return {
+        *templates_names,
+        *sections_names,
+        *(f"templates.{name}" for name in templates_names),
+        *(f"sections.{name}" for name in sections_names),
+    }
+
+
+def _without(hashed: set[str], names: set[str]) -> set[str]:
+    """*hashed* with every spelling of each name in *names* removed.
+
+    Dropping ``"_render_route"`` alone would leave ``"templates._render_route"``
+    behind and the weakened surface would not be weakened at all — a control test
+    that silently stopped controlling anything.
+    """
+    return {entry for entry in hashed if entry.rpartition(".")[2] not in names}
+
+
+def test_a_callable_stored_in_a_hashed_table_is_hashed_by_name() -> None:
+    """*** Hashing a dispatch table pins *which* function runs, not what it does. ***
+
+    ``_stable_repr`` has to reduce a function object to something stable across
+    processes, and what it can stably say is the name: ``<callable
+    _render_route>``. So ``INLINE_RENDERERS`` being hashed proves only that
+    ``{{rt|…}}`` still routes to ``_render_route``. Rewrite that body and a
+    stored ``location`` goes from ``"Route 34 (Johto)"`` to anything at all,
+    with the table's digest contribution unchanged.
+
+    The fix is not to make ``_stable_repr`` hash bodies — it would then have to
+    decide what a "body" is for a bound method, a partial or a lambda — but to
+    require every callable a hashed table points at to appear in the function
+    list, where its source is hashed properly.
+
+    Nesting is followed one level into a table's entries, which covers every
+    shape in use: ``INLINE_RENDERERS`` maps to bare functions and ``_BUILDERS``
+    holds ``(kind, builder)`` pairs. A callable buried deeper than that would be
+    missed, so the counterpart to this limit is the assertion below that every
+    ``_BUILDERS`` entry is hashed, plus the loud failure on any callable this
+    check cannot attribute at all.
+    """
+    unguarded: list[str] = []
+    uninspectable: list[str] = []
+    for table_name in _ROW_SHAPE_TABLES:
+        table = getattr(templates, table_name)
+        values = table.values() if isinstance(table, dict) else table
+        if not isinstance(values, list | tuple | type({}.values())):
+            continue
+        for entry in values:
+            for candidate in entry if isinstance(entry, list | tuple) else (entry,):
+                if not callable(candidate) or isinstance(candidate, type):
+                    continue
+                # A `functools.partial` has neither `__name__` nor `__module__`,
+                # and a bound method's `__module__` is its class's. Either would
+                # previously have been skipped in silence and so hashed as
+                # `<callable …>` with nothing pinning the body — the same hole
+                # this test exists to close, entering through the check itself.
+                # Failing on something it cannot inspect is cheaper than a guard
+                # that quietly abstains: whoever adds the partial gets to decide
+                # how it should be pinned.
+                if not hasattr(candidate, "__name__") or not hasattr(candidate, "__module__"):
+                    uninspectable.append(f"{table_name} -> {candidate!r}")
+                    continue
+                if candidate.__module__ != templates.__name__:
+                    continue
+                if candidate.__name__ not in _ROW_SHAPE_FUNCTIONS:
+                    unguarded.append(f"{table_name} -> {candidate.__name__}")
+
+    assert not uninspectable, (
+        "a hashed table holds a callable this check cannot attribute to a source function — a "
+        "partial, a bound method or a callable object. `_stable_repr` will still reduce it to a "
+        f"name-shaped string, so its body would go unpinned: {sorted(set(uninspectable))}"
+    )
+    assert not unguarded, (
+        "a hashed table points at a function whose body is not hashed; the digest pins only "
+        f"the name and the body can change under it: {sorted(set(unguarded))}"
+    )
+
+
+def test_every_reference_from_a_hashed_function_is_hashed_or_waived() -> None:
+    """*** What stops a fourth instance: the surface maintains its own membership. ***
+
+    Three times now the guarded set has been drawn one step short of where the
+    behaviour actually lives — row builders without the slicer, then named
+    functions without their callees. Each time the fix was to add the thing that
+    was missed, and each time that left the *next* one to be found by a reviewer
+    rather than by a test.
+
+    So this walks the ``ast`` of every hashed function and class, collects the
+    module-level names it reads, and fails unless each is either hashed itself or
+    carries a written reason in :data:`_HASH_WAIVERS`. Two properties follow that
+    the hand-maintained list did not have:
+
+    * **Adding a name pulls in its dependencies.** Hashing a function whose
+      callee is unguarded fails here immediately, so the surface closes over
+      itself rather than stopping wherever attention ran out.
+    * **The boundary is stated rather than assumed.** "The HTTP client and the
+      cache are excluded" was a claim in a comment that nothing checked — and it
+      was wrong, since it also silently excluded ``_drop_leading_heading`` and
+      every renderer. Now the exclusions are the waiver list, each with a reason,
+      and anything else is a failure.
+
+    The false-positive direction is preserved deliberately: this test *adds* to
+    what must be hashed and never removes, so it cannot make the digest noisier.
+    Local bindings are subtracted in :func:`_module_level_references` for the same
+    reason — a spurious entry here would be answered by a spurious waiver, and a
+    waiver list nobody trusts is a comment again.
+    """
+    hashed = _hashed_names()
+    unguarded = _unguarded_references(hashed, set(_HASH_WAIVERS))
+
+    assert not unguarded, (
+        "a hashed function reaches a module-level name that is neither hashed nor waived, so "
+        "editing that name changes a stored row without moving the digest:\n  "
+        + "\n  ".join(unguarded)
+        + "\nAdd it to the hashed tuples if it can change a row, or to _HASH_WAIVERS with the "
+        "reason it cannot. Do not widen the waiver list to silence this — the reason is the "
+        "artefact a reviewer reads."
+    )
+
+    # The walk must not drag the network or the cache under the digest: those
+    # change *whether* an answer is fetched, and hashing them would make the pin
+    # fire on a retry-policy edit. Asserted, because "the roots happen not to
+    # reach them" is exactly the kind of thing that quietly stops being true.
+    tails = {entry.rpartition(".")[2] for entry in hashed}
+    assert not (tails & {"BulbapediaClient", "WikiError", "PageRevision", "fetch_section"}), (
+        "the hashed surface now includes the client or the flow; the digest will fire on "
+        "changes that cannot alter a stored row"
+    )
+
+
+def test_the_waiver_list_is_used_and_says_why() -> None:
+    """A waiver nobody needs is a waiver nobody reviewed.
+
+    Two failure modes, both quiet. A waiver that no hashed function reaches is
+    dead text that makes the exclusion boundary look wider than it is — and would
+    silently pre-authorise a future reference to that name. A waiver with an empty
+    reason is the "we forgot" this whole mechanism exists to convert into "we
+    decided".
+    """
+    reached: set[str] = set()
+    for module, roots in _WALK_ROOTS:
+        for name in roots:
+            reached |= {
+                reference.rpartition(".")[2] for reference in _module_level_references(module, name)
+            }
+
+    unused = sorted(set(_HASH_WAIVERS) - reached)
+    assert not unused, f"waived but never referenced by a hashed function: {unused}"
+    for name, reason in _HASH_WAIVERS.items():
+        assert len(reason) > 15, f"the waiver for {name!r} does not give a reason: {reason!r}"
+
+
+def test_the_callee_walk_fails_loudly_on_an_unguarded_callee() -> None:
+    """*** The walk's own control: it must be capable of failing. ***
+
+    Three separate versions of this guard passed while missing something, so
+    "the callee walk reports nothing" is only worth having if the walk can be
+    shown to report something. Run against a surface with ``_render_route``
+    removed — precisely the state the code was in before this pass — it must name
+    the reference and say where from.
+
+    ``_first`` comes along because ``_render_default`` calls it, which is the
+    transitive property doing its job rather than an artefact: removing one name
+    from the surface is supposed to expose every edge into it.
+    """
+    weakened = _without(
+        _hashed_names(), {"_render_route", "_drop_leading_heading", "_HEADING_LINE"}
+    )
+    reported = _unguarded_references(weakened, set(_HASH_WAIVERS))
+
+    assert "poke_tools.wiki.templates.INLINE_RENDERERS -> _render_route" not in reported, (
+        "the walk should reach _render_route through the table test, not by parsing a table"
+    )
+    assert "poke_tools.wiki.sections.page_headings -> _HEADING_LINE" in reported
+    assert "poke_tools.wiki.sections.slice_section -> _HEADING_LINE" in reported
+    # `_drop_leading_heading` is a root, not a reference, so removing it from the
+    # hashed set is invisible to the walk. That limit is real but much narrower
+    # than it once read here, and it is measured rather than described in
+    # `test_the_roots_no_other_test_holds_are_named` — which is the point of this
+    # whole pass: a stated limit nothing re-derives drifts, and understating
+    # coverage invites someone to "fix" a gap that is four names wide.
+    assert not any("_drop_leading_heading" in entry for entry in reported)
+
+    # And the renderer table's own control, run the same way.
+    unguarded_renderers = [
+        renderer.__name__
+        for renderer in templates.INLINE_RENDERERS.values()
+        if renderer.__name__ not in weakened
+    ]
+    assert unguarded_renderers == ["_render_route"], (
+        "removing _render_route from the surface must be visible in the renderer-table check; "
+        f"got {sorted(set(unguarded_renderers))}"
+    )
+
+
+def test_the_roots_no_other_test_holds_are_named() -> None:
+    """*** The walk's limit, measured on every run instead of described once. ***
+
+    The walk follows *references*, so a root nothing else references is invisible
+    to it: delete the name from the tuple and the only thing that notices is a
+    tuple-length assertion. Naming that limit in a comment is how it went stale —
+    it read as covering twenty roots when the true figure was four, and an
+    overstated gap is one somebody eventually "fixes" by widening a guard that
+    was never loose.
+
+    So the arithmetic runs here. Of the roots reached by no other root, most are
+    held by a *different* test — the renderer table check, the ``_BUILDERS``
+    assert, the explicit membership assertions — and what is left over is pinned
+    by name below. A new root joining that set is a deliberate act with a visible
+    diff; one leaving it silently means some other test grew to cover it, which
+    is also worth seeing.
+    """
+    roots = {
+        *_ROW_SHAPE_FUNCTIONS,
+        *_ROW_SHAPE_CLASSES,
+        *_SLICE_SHAPE_FUNCTIONS,
+        *_SLICE_SHAPE_CLASSES,
+    }
+    reached: set[str] = set()
+    for module, names in _WALK_ROOTS:
+        for name in names:
+            reached |= {
+                reference.rpartition(".")[2] for reference in _module_level_references(module, name)
+            }
+
+    held_elsewhere = (
+        {renderer.__name__ for renderer in templates.INLINE_RENDERERS.values()}
+        | {builder.__name__ for _kind, builder in templates._BUILDERS}
+        # Asserted by name in `test_the_hashed_surface_names_only_things_that_exist`,
+        # each because a previous version of the guard omitted it.
+        | {"strip_comments", "slice_section", "_drop_leading_heading"}
+    )
+    assert sorted(roots - reached - held_elsewhere) == [
+        "_pre_split",
+        "build_rows",
+        "page_headings",
+        "parse_parsetree",
+    ], (
+        "the set of roots held by nothing but a tuple-length assertion has changed. That is not "
+        "a failure by itself — but the limit is documented from this list, so update the list "
+        "and check that whatever joined it is meant to be there."
+    )
+
+
+def test_the_walk_sees_a_cross_module_qualified_call(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """*** Mutation control for the one edge the walk could not see. ***
+
+    ``sections`` reaches ``templates`` by module reference, so every qualified
+    call parses as ``Attribute(value=Name('templates'))`` and a ``Name``-only
+    walk collected one opaque edge from all of them: ``slice_section ->
+    templates``. That edge was waived, and the waiver's reason — "the members
+    reached through it are hashed individually" — was true when written and
+    verified by nothing. A waiver carrying an unchecked claim is a comment, which
+    is exactly what the walk replaced; the defect class re-enters through the one
+    edge the walk was blind to.
+
+    The concrete break: add ``_normalise_venue`` to ``templates`` and call it as
+    ``templates._normalise_venue(...)`` from a slicer. The helper is unhashed,
+    the walk stays green, the digest does not move, and a ``location`` string —
+    the field PLAN.md §0.2 names as the entire justification for Tier 2 — changes
+    under a stale cache.
+
+    So this makes that edit for real. ``src/`` is not this test's to change, so
+    the calling half is a throwaway module and the callee is monkeypatched onto
+    ``templates``; the walk parses the same ``Attribute`` node either way, and
+    must name the helper rather than the module.
+    """
+    monkeypatch.setattr(templates, "_normalise_venue", lambda text: text, raising=False)
+    (tmp_path / "mutated_slicer.py").write_text(
+        "from poke_tools.wiki import templates\n"
+        "\n"
+        "\n"
+        "def slice_section(wikitext):\n"
+        "    return templates._normalise_venue(templates.strip_comments(wikitext))\n"
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.delitem(sys.modules, "mutated_slicer", raising=False)
+    mutated = importlib.import_module("mutated_slicer")
+    monkeypatch.delitem(sys.modules, "mutated_slicer", raising=False)
+
+    references = _module_level_references(mutated, "slice_section")
+    assert "templates._normalise_venue" in references, (
+        "a qualified cross-module call is still invisible to the walk, so the `templates` "
+        f"waiver's claim is asserted rather than checked; the walk saw {sorted(references)}"
+    )
+
+    reported = _unguarded_references(
+        _hashed_names(), set(_HASH_WAIVERS), roots=((mutated, ("slice_section",)),)
+    )
+    assert reported == ["mutated_slicer.slice_section -> templates._normalise_venue"], (
+        f"the walk must report the unhashed helper and nothing else; got {reported}"
+    )
+
+    # The other half of the same call — `templates.strip_comments` — is hashed,
+    # so the walk resolves it and stays quiet. Without this the test would also
+    # pass if the new branch reported every qualified call indiscriminately,
+    # which would bury the real finding under the module's whole public surface.
+    assert "templates.strip_comments" in references
+    assert "templates.strip_comments" in _hashed_names()
 
 
 def test_the_digest_is_the_same_in_a_fresh_interpreter() -> None:

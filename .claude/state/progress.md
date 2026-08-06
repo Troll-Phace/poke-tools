@@ -152,6 +152,36 @@ confirmed in production.
 - [ ] 2.6 test-engineer: light up the `where_to_find` feebas eval (`source_not: silently-empty`)
 - [ ] 2.7 **code-reviewer gate** (mandatory)
 
+## 🎯 TOOL BUDGET — decided 2026-08-06, DEPARTS FROM PLAN.md §3.2
+**Decision: ship all 12 tools. Do NOT climb §3.2's consolidation ladder pre-emptively.**
+
+§3.2 prescribes folding `get_move` → `get_learnset` (verbose flag), `type_matchup` → `team_check`, and
+`export_team` → `team_check` (format arg) to reach 8 if the model degrades. §0.4 set a ~10 ceiling.
+Current count is 10; `team_check` + `export_team` make **12**.
+
+**Why the departure — we now have evidence §0.4 was written without.** Live Cherry Studio test,
+Qwen 3.8, three unprompted queries:
+- "What TMs can Typhlosion learn in HeartGold?" → `get_learnset`, correct, first try
+- "Can Salamence learn Draco Meteor in Emerald?" → `can_learn` AND `get_move` **in parallel**, correct
+- "What can I catch in Emerald before the 4th badge?" → `list_obtainable`, paginated all 3 pages
+
+3/3 correct selection from 9 tools. The single failure was the `methods` enum (nested under
+`anyOf → items → enum`, invisible to the model) — a **schema-shape** problem, not a selection problem,
+and now fixed: every enum arg names its values in its description, generated from the `Literal`.
+
+**The counter-argument to consolidating:** folding `get_move` into `get_learnset` as a `verbose` flag
+makes that tool's contract muddier. A muddy tool is harder for a small model than one more clean tool.
+The ladder could plausibly make selection *worse*, and §0.4's mitigations (flat args, closed enums,
+generated value lists) are all in place and demonstrably working.
+
+**The ladder stays available and evidence-driven.** If Qwen mis-selects at 12, climb it in §3.2's
+documented order — rung zero is `server_info` (a Phase 0 diagnostic with zero team-building value,
+though note it is what confirmed the user's `POKE_TOOLS_DB` wiring, so drop it only under pressure).
+**Measure before folding.** The Phase 4 gate — a full HGSS team of 6 through Qwen — is the measurement.
+
+`test_server_smoke.py`'s budget guard must be updated to 12 with this rationale, NOT silently widened.
+The guard's value is that crossing the ceiling is a decision; keep it that way.
+
 ## 🔥 CACHE POISONING ACROSS BUILDS — happened for real, 2026-08-06
 **The Phase 1a reviewer predicted this mechanism exactly, we built the guard, and it bit anyway.**
 

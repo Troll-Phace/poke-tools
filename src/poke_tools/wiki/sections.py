@@ -226,6 +226,11 @@ def page_headings(wikitext: str) -> list[ResolvedSection]:
     ``prop=sections``. Scanning the text as it arrives would report it anyway,
     and the two branches must not disagree about what sections a page has.
 
+    That is not only a listing discrepancy: anything reported here can be
+    requested by name, and a phantom heading so requested makes
+    :func:`slice_section` return the comment's own body as content — which is how
+    a commented-out template becomes a fabricated row.
+
     Indexes are left empty deliberately: this branch never fetches by index, and
     minting one here would create exactly the hardcoded-index habit §0.1 warns
     against.
@@ -254,14 +259,28 @@ def slice_section(wikitext: str, section: ResolvedSection) -> str:
     entirely subsections.
 
     Takes a **whole page**, and strips its comments before scanning, for the same
-    reason :func:`page_headings` does — and with sharper consequences. A
-    commented-out ``== Held by ==`` would close the section early, so the slice
-    ended *inside* the comment, and every line of the comment above that point
-    went on to :func:`~poke_tools.wiki.templates.scan_wikitext` as content: the
-    routine ``<!-- disabled pending verification …{{learnlist/tm4|…}}… -->``
-    idiom came back as a TM row that is not on the page, at ``confidence: high``,
-    with a revision id attached. Real rows below the false boundary vanished with
-    it. Comments are balanced within a whole page, so the strip is exact, and it
+    reason :func:`page_headings` does. A commented-out ``== Held by ==`` has two
+    distinct consequences, and it is worth being precise about which is which,
+    because only one of them fabricates.
+
+    *Truncation — rows go missing.* A commented-out heading between two real ones
+    closes the enclosing section early. The slice below is ``lines[start:index]``,
+    **exclusive** of the closing line, so the truncated section inherits only the
+    orphaned ``<!--`` opener and no template, and ``_UNCLOSED_COMMENT`` in
+    :func:`~poke_tools.wiki.templates.scan_wikitext` drops that line — doing
+    exactly its job. Nothing is invented; the real rows below the false boundary
+    are silently gone. Pre-fix, a ``Learnset`` carrying TM06 and TM26 either side
+    of a commented-out heading returned ``[TM26]`` alone.
+
+    *Phantom section — rows are fabricated.* The same commented-out heading is
+    also reported by :func:`page_headings`, so a caller can request "Held by"
+    **by name** and get a slice that starts on it. The comment's own body is then
+    the section content, and the routine ``<!-- disabled pending verification
+    …{{learnlist/tm4|…}}… -->`` idiom comes back as a TM row that is not on the
+    page, at ``confidence: high``, with a revision id attached. That is the
+    fabrication vector, and it requires the phantom name to be asked for.
+
+    Comments are balanced within a whole page, so the strip is exact, and it
     leaves this function computing boundaries the way MediaWiki does.
     """
     lines = templates.strip_comments(wikitext).split("\n")
