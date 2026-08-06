@@ -22,8 +22,14 @@ failure they catch:
    diverge-by-lacking-rows case nor the level-only case exists anywhere in the
    two launch games (verified dex-wide), so those two arms are pinned
    structurally against a synthetic database instead of by example.
-4. **Three-tool agreement.** The bug that produced this file was the feature
-   being wired into two tools of three, with nothing noticing.
+4. **Three-tool agreement, and the note's neutrality.** The bug that produced
+   this file was the feature being wired into two tools of three, with nothing
+   noticing. The bug that produced the neutrality tests was subtler: the note
+   narrowed its caveat to illegal verdicts, on the assumption that alternate
+   forms are supersets of the default. They are not — Wormadam-Plant learns
+   eleven HGSS moves Wormadam-Trash cannot — and nothing in the suite looked at
+   the note's *direction*, only at its existence. Emerald cannot catch this
+   class of bug at all: its one diverging form is a pure superset.
 5. **``can_learn``'s scoped rejection reason**, which sits beside the verdict
    where a caller who skips ``notes`` still reads it.
 """
@@ -258,11 +264,22 @@ def _synthetic(rows: list[tuple[int, int, int, int]]) -> sqlite3.Connection:
 
 
 def test_a_form_that_diverges_only_by_lacking_rows_fires(conn: sqlite3.Connection) -> None:
-    """The second ``EXCEPT`` arm. No form in either launch game diverges this way
-    — verified across all 224 species with a non-default form in both games — so
-    dropping the arm is invisible to every data-driven test above. A form that
+    """The second ``EXCEPT`` arm. No form in either launch game diverges *only*
+    this way — verified across all 224 species with a non-default form in both
+    games — so dropping the arm is invisible to every data-driven test above.
+
+    Read that precisely, because an earlier, stronger wording here ("no form
+    diverges this way") sent a reviewer past a CRITICAL: **twelve HGSS (default,
+    alternate) pairs do lack identity tuples the default has** — all three Deoxys
+    forms, both Wormadam cloaks, all five Rotom appliances, Giratina-Origin and
+    Shaymin-Sky. Every one of them also carries extras, so the *first* ``EXCEPT``
+    arm catches them first and the second stays unexercised. Emerald is 0 and 0:
+    its only diverging form, Deoxys-Speed, is a pure superset.
+
+    So the synthetic fixture is right — the second arm really is unreached by
+    real data — but the divergence it models is not hypothetical. A form that
     *cannot* learn what the default can is exactly as wrong an answer as one that
-    learns more."""
+    learns more, and it is the common case, not the exotic one."""
     synthetic = _synthetic(
         [
             (1, 100, 1, 5),
@@ -410,6 +427,127 @@ def test_every_tools_note_names_the_default_form_and_the_alternates(
                 assert alternate in note
 
 
+#: Words that qualify *which verdicts or rows* a caveat applies to. A form note
+#: containing any of these has narrowed itself to a subset of its own result, and
+#: the reader takes the complement as unaffected. Deliberately does not include
+#: bare ``cannot`` — the real notes say "this server cannot query them", which
+#: scopes the *server*, not the verdicts.
+_DIRECTIONAL_QUALIFIERS = (
+    "illegal",
+    "legal verdict",
+    "legal result",
+    "legal answer",
+    "rejection",
+    "rejected",
+    "not legal",
+    "cannot learn",
+    "can learn",
+    "negative",
+    "positive",
+    "failing",
+    "passing",
+    "false verdict",
+    "wrong verdict",
+)
+
+
+def _privileges_a_direction(note: str) -> list[str]:
+    """Qualifiers in ``note`` that narrow the caveat to one kind of verdict."""
+    lowered = note.lower()
+    return [word for word in _DIRECTIONAL_QUALIFIERS if word in lowered]
+
+
+def test_the_directional_wording_check_catches_a_narrowed_note() -> None:
+    """*** The mutation check for the test below. ***
+
+    A guard against narrowing is worthless if it cannot recognise a narrowed
+    note, so the detector is exercised against the real wordings — the neutral
+    one that shipped, and the one it replaced — before it is trusted on live
+    output. Without this, the test below would pass just as happily against a
+    detector whose word list had gone stale.
+    """
+    neutral = (
+        "These verdicts are wormadam-plant's. Wormadam also has wormadam-sandy, "
+        "wormadam-trash in heartgold-soulsilver, and their learnsets differ; this "
+        "server cannot query them, so do not treat these verdicts as their answer."
+    )
+    assert _privileges_a_direction(neutral) == []
+
+    for narrowed in (
+        # The wording that actually shipped and had to be corrected.
+        neutral.replace("these verdicts", "an illegal verdict"),
+        # The mirror-image mistake, narrowing to the passing side instead.
+        neutral.replace("these verdicts", "a legal verdict"),
+        # A qualifier smuggled in as a clause rather than a noun phrase.
+        neutral + " Moves reported as not legal may still be legal for those forms.",
+    ):
+        assert _privileges_a_direction(narrowed), narrowed
+
+
+@pytest.mark.parametrize("game", ["heartgold-soulsilver", "emerald"])
+def test_no_tools_form_note_privileges_one_direction_of_verdict(
+    conn: sqlite3.Connection, game: str
+) -> None:
+    """*** Nothing asserted this, which is how the narrowing shipped. ***
+
+    A note reading "do not treat an illegal verdict as their answer" tells the
+    reader, by omission, that the legal ones are safe. They are not — see the
+    Leaf Storm case below — and the narrowed wording passed the author, the
+    orchestrator and a full review round precisely because no test looked at the
+    note's *direction*, only at whether one existed and named the right forms.
+
+    This does not pin prose. It requires only that whatever the note says, it says
+    it about the whole result rather than half of it.
+    """
+    for name in _EXPECTED_FIRING[game]:
+        notes = [
+            _form_note(find_pokemon(name, game, conn=conn).notes),
+            _form_note(get_learnset(name, game, conn=conn).notes),
+            _form_note(can_learn(name, ["tackle"], game, conn=conn).notes),
+        ]
+        for note in notes:
+            assert note is not None, (name, game)
+            assert _privileges_a_direction(note) == [], (
+                f"{name}/{game}: form note narrows its caveat to one kind of "
+                f"verdict via {_privileges_a_direction(note)} — {note}"
+            )
+
+
+def test_an_alternate_form_can_lack_a_move_the_default_learns(
+    conn: sqlite3.Connection,
+) -> None:
+    """The fact underneath the neutrality requirement, pinned from the data.
+
+    Alternate forms are *not* supersets of the default. Wormadam-Plant learns Leaf
+    Storm by level-up in HGSS; Wormadam-Trash cannot learn it by any method
+    ``get_learnset`` exposes. So a legal verdict on the default genuinely is not an
+    answer for the alternate, and a note that implies otherwise is wrong.
+
+    Pinned in HGSS on purpose: Emerald's only diverging form, Deoxys-Speed, is a
+    pure superset of the default, so Emerald structurally cannot expose this class
+    of bug. Form behaviour has to be tested against HGSS.
+    """
+    version_group_id = resolve_scope("heartgold-soulsilver").version_group_id
+    default_id, alternates = _forms(conn, "wormadam")
+    default_rows = _identity_rows(conn, default_id, version_group_id)
+    trash_rows = _identity_rows(conn, alternates["wormadam-trash"], version_group_id)
+
+    def exposed_moves(rows: set[tuple[int, int, int]]) -> set[int]:
+        return {move_id for move_id, method_id, _ in rows if method_id in _EXPOSED_METHOD_IDS}
+
+    lacking = exposed_moves(default_rows) - exposed_moves(trash_rows)
+    assert lacking, "wormadam-trash must lack at least one move wormadam-plant learns"
+
+    leaf_storm = db.query_one(conn, "SELECT id FROM moves WHERE identifier = ?", ("leaf-storm",))
+    assert leaf_storm is not None
+    assert leaf_storm["id"] in lacking, "leaf-storm is the named example; the data moved"
+
+    # And the tool reports it legal, off the default's rows — the exact verdict
+    # the batch note has to keep covering.
+    report = can_learn("wormadam", ["leaf-storm"], "heartgold-soulsilver", conn=conn)
+    assert report.all_legal is True
+
+
 def test_the_form_note_rides_every_page_unlike_the_cross_check(
     conn: sqlite3.Connection,
 ) -> None:
@@ -468,10 +606,23 @@ def test_a_species_with_no_diverging_form_keeps_the_species_level_reason(
 def test_a_legal_verdict_carries_no_reason_even_on_a_diverging_species(
     conn: sqlite3.Connection,
 ) -> None:
-    """The deliberate asymmetry: ``legal=True`` on the default form is not false
-    the way the rejection was, so per-move form boilerplate on passing moves is
-    noise. The batch-level note still covers it."""
-    report = can_learn("wormadam", ["tackle"], "heartgold-soulsilver", conn=conn)
+    """``reason=None`` on legal verdicts — and *not* because legal verdicts are
+    safer. They are not: Wormadam-Plant learns Leaf Storm at level 47 and
+    Wormadam-Trash cannot learn it at all, so the ``legal=True`` asserted below is
+    exactly as wrong for Trash as the unscoped rejection was. That is why the move
+    here is ``leaf-storm`` and not something all three cloaks learn — a case where
+    no risk exists cannot pin a decision about risk.
+
+    The justification, matching ``_verdict``'s docstring in ``src``: the illegal
+    path emits a *sentence* ("X cannot learn this move in Y") that is affirmatively
+    false if left unscoped, and correcting a false sentence is not the same as
+    adding a new one. The legal path emits no sentence, and silence is neutral.
+    Scoping it anyway would repeat one per-species fact on every legal row of an
+    unpaginated batch — the duplication PLAN.md §1.3's response discipline argues
+    against. The caveat is carried once, by the batch note, which is directionally
+    neutral and so covers this verdict too.
+    """
+    report = can_learn("wormadam", ["leaf-storm"], "heartgold-soulsilver", conn=conn)
     (verdict,) = report.moves
     assert verdict.legal is True
     assert verdict.reason is None

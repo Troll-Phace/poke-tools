@@ -504,11 +504,21 @@ def can_learn(
 
     # Same substitution get_learnset discloses (see db.diverging_forms), and it
     # bites harder here: this tool is §0.4's hallucination guard, so its verdict
-    # is the one a small model trusts hardest. Wormadam-Trash learns Iron Head by
-    # level-up and tutor and Flash Cannon by machine in HGSS — 10 rows of
-    # divergence across the exposed methods — and Deoxys-Speed diverges by 71 in
-    # Emerald. An undisclosed `all_legal=False` on either is a confident wrong
-    # answer at the exact point the model stops checking.
+    # is the one a small model trusts hardest.
+    #
+    # Divergence runs in *both* directions, and an earlier version of this note
+    # got that wrong. Alternate forms are not supersets of the default: measured
+    # across the four exposed methods in HGSS, Wormadam-Trash has 10 rows
+    # Wormadam-Plant lacks *and* lacks 11 moves Wormadam-Plant learns
+    # (leaf-storm, giga-drain, energy-ball, ...); Deoxys-Attack lacks 7,
+    # Shaymin-Sky 4, Giratina-Origin 1. So `legal=True` here is exactly as
+    # unsafe for an alternate form as `all_legal=False` is — `can_learn(
+    # 'wormadam', ['leaf-storm'], 'heartgold-soulsilver')` reports legal on
+    # Plant's rows for a move Trash cannot learn at all.
+    #
+    # Emerald hides this: its only diverging form, Deoxys-Speed, is a pure
+    # superset (71 extra rows, 0 missing), so an Emerald-only check will never
+    # surface the direction that matters. Test against HGSS.
     divergence = db.diverging_forms(
         conn, species.species_id, species.pokemon_id, scope.version_group_id
     )
@@ -528,8 +538,8 @@ def can_learn(
         notes.append(
             f"These verdicts are {divergence.default_form}'s. {species.name} also has "
             f"{', '.join(divergence.alternates)} in {scope.game}, and their learnsets "
-            "differ; this server cannot query them, so an illegal verdict here is not "
-            "an answer for those forms."
+            "differ; this server cannot query them, so do not treat these verdicts as "
+            "their answer."
         )
 
     return LegalityReport(
@@ -564,6 +574,17 @@ def _verdict(
     rows are Wormadam-Plant's, and that is all this verdict covers. The batch-level
     note explains the rest, but the reason has to stand on its own — it sits
     directly beside the verdict, and a caller who skips the note reads it anyway.
+
+    Legal verdicts deliberately keep ``reason=None``, and *not* because they are
+    safer: a `legal=True` read off Plant's rows is just as wrong for Trash (see the
+    both-directions measurements in ``can_learn``). The distinction is narrower. The
+    illegal path emits a sentence that would itself be false if left unscoped, and
+    correcting a false sentence is not the same as adding a new one; the legal path
+    emits no sentence, and silence is neutral. Scoping it would mean repeating one
+    per-species fact on every legal row of an unpaginated batch, which is the
+    duplication PLAN.md §1.3's response discipline argues against — the same reason
+    ``cross_check`` rides only the first page. The form caveat is carried once, by
+    the batch note, which is now directionally neutral and so covers both verdicts.
     """
     if move_id is None:
         return MoveLegality(move=name, legal=False, reason="no move by that name")
@@ -585,8 +606,10 @@ def _verdict(
     # method, so `machine_number` is already NULL on every other row and dropping
     # this filter changes nothing today. To re-check: delete the
     # `row["method_id"] == METHOD_IDS["machine"]` conjunct below, keeping the
-    # `is not None` one, and run `uv run pytest` — 334 passed / 3 skipped either
-    # way (87 passed in tests/test_learnset.py alone), so no test constrains it.
+    # `is not None` one, and run `uv run pytest tests/test_learnset.py` — 87 passed
+    # either way, so no test constrains it. Deliberately a per-file count and not a
+    # full-suite total: a suite-wide number self-invalidates the next time any test
+    # is added anywhere, and this comment has already rotted twice that way.
     # It stays as defence in depth, because the thing it guards against —
     # `machines` recording that *some* TM teaches the move, not that this Pokémon
     # can use it — would resurface as "Psyduck learns Psychic — TM29 (egg)" the
