@@ -1,0 +1,47 @@
+[project]
+name = "poke-tools"
+version = "0.1.0"
+description = "MCP server for Pokemon team building (HeartGold/SoulSilver and Emerald)."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "mcp>=2.0.0",
+    "pydantic>=2.0",
+    # The uv-managed CPython builds ship no CA bundle, so stdlib
+    # ssl.create_default_context() cannot verify raw.githubusercontent.com and
+    # the ingest dies with CERTIFICATE_VERIFY_FAILED. truststore reads the
+    # platform trust store (macOS Keychain / Windows CryptoAPI / system CAs)
+    # instead of carrying a bundle that goes stale. Already present transitively
+    # via mcp; declared here because ingest/pokeapi_csv.py imports it directly.
+    "truststore>=0.10",
+]
+
+[project.scripts]
+poke-tools-mcp = "poke_tools.server:main"
+poke-tools-build = "poke_tools.ingest.build:main"
+
+[build-system]
+requires = ["uv_build>=0.11.0,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "poke_tools"
+module-root = "src"
+
+[dependency-groups]
+dev = [
+    "anyio>=4.0",
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "pyyaml>=6.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -3,8 +3,8 @@
 **A Pokémon team-building agent for Cherry Studio, backed by a custom Python MCP server.**
 
 Status: **approved, ready for implementation handoff.** Nothing built yet.
-Target repo: `~/Documents/VSCode-Projects/poke-tools` (currently empty)
-Date: 2026-08-06
+Target repo: `~/Documents/VSCode-Projects/poke-tools`
+Date: 2026-08-06 · **Corrections applied 2026-08-05 — see §0.6, which overrides anything contradicting it.**
 
 **Scope locked:** Python 3.12 + uv · local SQLite data layer · in-game playthrough and Nuzlocke/challenge-run team building · **HeartGold/SoulSilver and Emerald first** · Showdown-format team export · Nuzlocke rules *reported, not enforced* · ROM hack overlays deferred (hook preserved, schema not designed).
 
@@ -102,6 +102,93 @@ One tool below (`can_learn`) exists purely as a hallucination guard — it's the
 ### 0.5 Nothing worth reusing exists
 
 No Bulbapedia MCP server exists anywhere — npm, PyPI, or GitHub. The three PokéAPI MCP servers that do exist (`pokeapi-mcp-server` 158 dl/wk, `@cyanheads/pokeapi-mcp-server` 55, `pokemon-mcp-server` 6) are thin passthroughs that inherit every gap in §0.2. Building from scratch is correct.
+
+### 0.6 Corrections applied 2026-08-05 — re-verified against live sources
+
+Four assumptions in the original draft were wrong. All corrected here and inline below. **Trust this section over anything that contradicts it elsewhere in the document.**
+
+#### 0.6.1 The MCP SDK renamed `FastMCP` → `MCPServer` in 2.0.0
+
+`mcp` 2.0.0 is current on PyPI (`requires_python >= 3.10`), so the version pin in §6.2 stands — but the v1 `FastMCP` import that most training data reaches for is gone:
+
+```python
+from mcp.server import MCPServer  # v1 was: from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import Context  # for lifespan access
+```
+
+| Need | v2 idiom |
+|---|---|
+| Structured output | Return a Pydantic `BaseModel` from the tool fn — output schema generated automatically |
+| Enum-constrained arg (§0.4) | `Literal["heartgold-soulsilver", "emerald"]` |
+| Arg description / bounds | `Annotated[int, Field(ge=1, le=40, description=...)]` |
+| Shared SQLite connection | `lifespan=` async context manager → `ctx.request_context.lifespan_context` |
+| Read-only hint | `@mcp.tool(title=..., annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False))` |
+| Entrypoint | `mcp.run()` — defaults to stdio |
+
+The `lifespan` hook is the correct home for the SQLite connection: it opens once per server lifecycle, not once per tool call.
+
+#### 0.6.2 `move_past_values.csv` does not exist — it is `move_changelog.csv`
+
+`past_values` is the *PokéAPI REST* field name and has no CSV counterpart. The veekun CSV set (184 files) has **`move_changelog.csv`** (3,475 bytes) instead:
+
+```
+move_id,changed_in_version_group_id,type_id,power,pp,accuracy,priority,target_id,effect_id,effect_chance
+13,5,,,,75,,,,
+```
+
+A row records the values a move held **prior to** the change introduced in `changed_in_version_group_id`; `NULL` means unchanged. Resolving a move's Emerald-era stats therefore means starting from `moves.csv` (current values) and walking changelog rows *backwards*. **Confirm this direction empirically before shipping `get_move`** — reversing it yields plausible, wrong numbers rather than an error, and needs its own eval.
+
+Related: `type_efficacy_past.csv` is 6 rows total (Gen 1 and Gen 5 changes only). That's the whole historical chart — don't expect more.
+
+#### 0.6.3 `encounters.csv` keys on `version_id`, not `version_group_id`
+
+Every other table keys on `version_group_id`. Encounters do not:
+
+```
+encounters.csv:  id,version_id,location_area_id,encounter_slot_id,pokemon_id,min_level,max_level
+```
+
+| Game | `version_group_id` | `version_id` |
+|---|---|---|
+| Emerald | 6 | 9 |
+| HeartGold | 10 | 15 |
+| SoulSilver | 10 | 16 |
+
+So `where_to_find(game="heartgold-soulsilver")` must union **two** version_ids and dedupe; `emerald` maps to one. Put the `version_group_id → [version_id]` map in `games.py` next to the alias resolver. Mixing the two ID spaces is a silent-wrong-answer bug, not a crash.
+
+Rarity and conditions are *not* in `encounters.csv` — Feebas-class answers need `encounter_slots.csv` and `encounter_condition_value_map.csv` (1.1 MB).
+
+#### 0.6.4 TM/HM numbering is derivable; §0.2's machine counts are correct
+
+`machines.csv` is `machine_number,version_group_id,item_id,move_id`. Verified for both launch games:
+
+- HGSS (vg 10): 100 rows, `machine_number` spanning 1–108 → TM01–TM92 + HM01–HM08
+- Emerald (vg 6): 58 rows, spanning 1–108 → TM01–TM50 + HM01–HM08
+
+Rule: `n <= 100 → f"TM{n:02d}"`, else `f"HM{n-100:02d}"`. Matches §0.2's verified 100 / 58 counts.
+
+#### 0.6.6 The "~570 characters" response-size figure does not describe a Tier-1 learnset
+
+§1.3 originally claimed "a full Gen 4 TM learnset answer measures ~570 characters" while also specifying a 40-row cap. Those can't both hold — 570 characters across 40 rows is 14 characters per row. The 570-byte figure in §0.1 is correct *for what it describes*: a single Bulbapedia section parsed to JSON. It was carried into §1.3 and applied to a different thing.
+
+Measured against the built tool (`get_learnset("garchomp", "heartgold-soulsilver", methods=["machine"])`, compact JSON, 40 of 46 rows):
+
+```
+4,162 bytes total · 104 bytes per row
+{"move":"aerial-ace","method":"machine","tm":"TM40","type":"flying","power":60,"damage_class":"physical"}
+```
+
+**The minimal default field set in §1.3 (`move, type, power`) is also stale.** `method` and `tm` are not optional extras — "which TM, and can I get it yet" is the question the tool exists to answer, and stripping them would leave the model to guess. The honest default is the six fields above; `damage_class` is the only genuinely droppable one, worth ~1 KB across a full page.
+
+**Budget accordingly: a paged Tier-1 list response costs ~4 KB, not ~570 bytes.** That's acceptable — it's still three orders of magnitude below the 912 KB browser page §0.1 measured — but §3.2's tool-consolidation ladder and any future field-set decision should be judged against 4 KB. Tier 2's <6 KB target in §2 phase 3 is unaffected; that one does describe parsed wiki output.
+
+#### 0.6.5 Re-confirmed unchanged
+
+- `pokemon_moves.csv` is exactly `pokemon_id,version_group_id,move_id,pokemon_move_method_id,level,order,mastery` — §6.5's composite index is the right one.
+- `pokemon_move_methods.csv` has 12 methods; the four that matter are `1 level-up, 2 egg, 3 tutor, 4 machine`.
+- **The Bulbapedia UA gate is real and live**: UA set → HTTP 200, empty UA → **HTTP 403**.
+- Showdown `learnsets.json` reachable at `play.pokemonshowdown.com/data/learnsets.json` (200).
+- Every other CSV named in this document exists upstream.
 
 ---
 
@@ -203,11 +290,11 @@ Eleven tools. Flat args, enum-constrained, structured JSON out, every list respo
 | `find_pokemon` | Fuzzy name → species card: stats, types, abilities (incl. hidden), egg groups, evolution with per-game method, growth rate | 1 |
 | `get_learnset` | Moves by game + method(s), with TM numbers resolved. Auto-walks to base form for egg moves. Auto-folds DLC version groups | 1 |
 | **`can_learn`** | **Batch legality check: "can Garchomp learn [EQ, Dragon Claw, Swords Dance, Fire Fang] in Platinum?" → yes/no + how.** The hallucination guard | 1 |
-| `get_move` | Move data with gen-correct `past_values` (power/acc changes across gens) | 1 |
+| `get_move` | Move data with gen-correct historical values (power/acc changes across gens) — sourced from `move_changelog.csv`, walked *backwards* from current; see §0.6.2 | 1 |
 | `get_item` | Effect, fling, category, held-by-wild rarity | 1 → 2 for acquisition |
-| `where_to_find` | Encounters by game: method, levels, rarity, conditions | 1 → 2 for Gen 9/BDSP/PLA |
+| `where_to_find` | Encounters by game: method, levels, rarity, conditions. **Joins on `version_id`, not `version_group_id` — HGSS is two version_ids, see §0.6.3** | 1 → 2 for Gen 9/BDSP/PLA |
 | `list_obtainable` | "What's catchable in HGSS before badge 4" — the playthrough/Nuzlocke workhorse | 1 |
-| `type_matchup` | Offensive + defensive chart, gen-correct via `type_efficacy_past` | 1 |
+| `type_matchup` | Offensive + defensive chart, gen-correct via `type_efficacy_past` (6 rows total — Gen 1 and Gen 5 changes only, §0.6.2) | 1 |
 | `team_check` | Full team check: moveset legality, item availability, type coverage gaps, redundancy. **Reports** Nuzlocke/challenge-rule observations rather than enforcing a ruleset | 1 |
 | `export_team` | Emit the finished team in Pokémon Showdown text format (paste-ready for damage calcs) | 1 |
 | `wiki_lookup` | Surgical Bulbapedia: `page` + `section_name` → parsed rows or trimmed text | 2 |
@@ -227,7 +314,7 @@ resolve page (prefixsearch, handles /Generation IV learnset subpages)
   → cache
 ```
 
-**Response discipline, enforced in `db.py` and applied everywhere:** default field sets are minimal (`move, type, power` — contest stats and appeal require an explicit `fields` arg), lists cap at 40 rows with `total_count`, and wikitext *never* crosses the tool boundary. A full Gen 4 TM learnset answer measures ~570 characters.
+**Response discipline, enforced in `db.py` and applied everywhere:** default field sets are minimal (contest stats and appeal require an explicit `fields` arg), lists cap at 40 rows with `total_count`, and wikitext *never* crosses the tool boundary. **See §0.6.6 for the corrected size budget** — a full 40-row Gen 4 TM learnset measures ~4.2 KB, not the ~570 characters originally stated here, and the minimal field set is six fields rather than three because `method` and `tm` are the question the tool exists to answer.
 
 ### 1.4 Cherry Studio wiring
 
@@ -338,11 +425,11 @@ The cross-gen leakage case (`draco-meteor` in Emerald) is the highest-value sing
 
 For whoever picks this up:
 
-1. **Read §0 first.** Especially §0.1 (section indexes are unstable, use `parsetree`), §0.2 (egg moves live on the base form; DLC folds into base version groups), and §0.4 (tool budget is a hard constraint, not a style preference).
-2. **Scaffold with uv**, Python 3.12, `mcp` SDK 2.0.0. Two console scripts: `poke-tools-mcp` and `poke-tools-build`.
+1. **Read §0 first.** Especially §0.1 (section indexes are unstable, use `parsetree`), §0.2 (egg moves live on the base form; DLC folds into base version groups), §0.4 (tool budget is a hard constraint, not a style preference), and **§0.6 (four corrections that override the rest of this document)**.
+2. **Scaffold with uv**, Python 3.12, `mcp` SDK 2.0.0 — **the v2 API is `from mcp.server import MCPServer`, not `FastMCP`; see §0.6.1.** Two console scripts: `poke-tools-mcp` and `poke-tools-build`.
 3. **Phase 0 before anything else.** Get one trivial tool callable from Cherry Studio Agent mode with Qwen 3.8. This validates the `uvx` launch path, the bundled-runtime PATH situation, and the model's tool-calling behavior in one shot. Everything else is wasted if this doesn't work.
-4. **Ingest is CSVs, not the JSON dump.** `raw.githubusercontent.com/PokeAPI/pokeapi/master/data/v2/csv/*.csv`. Skip `move_flavor_text.csv` (5.4 MB of text nobody needs).
-5. **Index on `(pokemon_id, version_group_id, pokemon_move_method_id)`** — that composite carries essentially every learnset query.
+4. **Ingest is CSVs, not the JSON dump.** `raw.githubusercontent.com/PokeAPI/pokeapi/master/data/v2/csv/*.csv`. Skip `move_flavor_text.csv` (5.4 MB) and `item_flavor_text.csv` (6.3 MB) — text nobody needs.
+5. **Index on `(pokemon_id, version_group_id, pokemon_move_method_id)`** — that composite carries essentially every learnset query. **But note encounters key on `version_id` instead; see §0.6.3.**
 6. **Set a real User-Agent on every Bulbapedia request.** Empty UA is a hard Cloudflare 403.
 7. **Never let wikitext cross the tool boundary.** Parse to JSON inside the tool. This is the whole point of the project.
 8. **Write the eval in §5 as you go**, not at the end. It's the only thing that catches version-group leakage and Bulbapedia template drift.

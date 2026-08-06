@@ -1,7 +1,10 @@
 __pycache__/
 *.pyc
 .venv/
-.python-version
 .uv/
+.pytest_cache/
+.ruff_cache/
 data/pokedex.sqlite
+data/pokedex.sqlite.build-tmp
+data/source-cache/
 .claude/settings.local.json

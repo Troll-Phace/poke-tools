@@ -1,0 +1,457 @@
+# poke-tools eval harness — known-answer regression suite (PLAN.md §5)
+#
+# Model-free. Every case calls a tool directly and checks a known answer. This is
+# what catches Bulbapedia template drift and ingest regressions *before* they turn
+# into confidently wrong team advice.
+#
+# Written up front on purpose (PLAN.md §6.8): cases for tools that do not exist yet
+# SKIP rather than fail, and light up automatically as each tool lands. A skip is
+# reported distinctly from a pass — see tests/test_evals.py.
+#
+# Case schema:
+#   name    — stable, human-readable id (used as the pytest test id)
+#   tool    — must be a tool named in PLAN.md §1.3; enforced by a meta-test
+#   args    — flat kwargs passed straight to the tool (PLAN.md §0.4: no nesting)
+#   expect  — one or more of:
+#               contains   list of row-subsets (dicts) or substrings (strings)
+#               count      exact number of result rows
+#               all_legal  boolean, for can_learn
+#               fields     exact equality on named top-level response fields
+#               max_bytes  serialized result must not exceed this size
+#               source_not "silently-empty" — result must not be an empty list
+#                          presented as a complete answer
+#   why     — free text: what regression this case exists to catch
+
+cases:
+  # --- Tier 1: learnsets, the two launch games -----------------------------
+
+  - name: typhlosion_hgss_tms_include_flamethrower
+    tool: get_learnset
+    args: { pokemon: typhlosion, game: heartgold-soulsilver, methods: [machine] }
+    expect:
+      contains:
+        - { move: flamethrower, tm: "TM35" }
+    why: >-
+      Phase 1 exit criterion. Proves TM *numbers* resolve, not just move names —
+      machine_number → TM/HM naming per PLAN.md §0.6.4 (n <= 100 → TMnn).
+
+  - name: gible_emerald_egg_moves_fail_cleanly
+    tool: get_learnset
+    args: { pokemon: gible, game: emerald, methods: [egg] }
+    expect:
+      count: 0
+    why: >-
+      Gible is Gen 4 and does not exist in Emerald. Out-of-scope queries must
+      return an empty typed result, never raise. Clean failure, not a crash.
+
+  - name: swampert_emerald_egg_moves_walk_to_mudkip
+    tool: get_learnset
+    args: { pokemon: swampert, game: emerald, methods: [egg] }
+    expect:
+      contains:
+        - { move: curse }
+    why: >-
+      Base-form walk (PLAN.md §0.2). Egg moves attach to the base species, so
+      Swampert's egg moves live on Mudkip. Without the evolves_from_species walk
+      this returns zero rows and looks like a legitimately empty answer.
+
+  - name: salamence_emerald_legal_moveset
+    tool: can_learn
+    args:
+      pokemon: salamence
+      moves: [earthquake, dragon-claw, brick-break, fly]
+      game: emerald
+    expect:
+      all_legal: true
+    why: >-
+      The positive control for the cross-gen case below. If version-group
+      filtering is *over*-tight, this goes false and the guard is useless.
+
+  - name: salamence_emerald_rejects_draco_meteor
+    tool: can_learn
+    args: { pokemon: salamence, moves: [draco-meteor], game: emerald }
+    expect:
+      all_legal: false
+    why: >-
+      *** HIGHEST-VALUE CASE IN THE SUITE (PLAN.md §5). ***
+      Draco Meteor is a Gen 4 tutor move. If version-group filtering leaks across
+      generations, this returns legal, reads as entirely plausible, and makes the
+      whole team builder untrustworthy. Do not delete or weaken this case.
+
+  - name: salamence_hgss_accepts_draco_meteor
+    tool: can_learn
+    args: { pokemon: salamence, moves: [draco-meteor], game: heartgold-soulsilver }
+    expect:
+      all_legal: true
+    why: >-
+      Positive control for the cross-gen case above. A version-group filter that
+      rejects everything would make that guard pass while breaking the tool; this
+      is what stops "no move is ever legal" from reading as a green suite.
+
+  - name: swampert_emerald_egg_source_is_reported
+    tool: get_learnset
+    args: { pokemon: swampert, game: emerald, methods: [egg] }
+    expect:
+      fields: { egg_moves_from: mudkip, source: pokeapi }
+    why: >-
+      The base-form walk must be *disclosed*, not just performed. A reader has to
+      be able to tell which species the egg moves were read from — that field is
+      the only thing distinguishing a correct walk from a walk into a species
+      that does not exist in this game.
+
+  - name: crobat_emerald_egg_moves_walk_two_stages
+    tool: get_learnset
+    args: { pokemon: crobat, game: emerald, methods: [egg] }
+    expect:
+      fields: { egg_moves_from: zubat }
+    why: >-
+      The walk must be general, not special-cased for Mudkip, and must not stop
+      after one hop — Golbat has no egg rows of its own, so a single-hop walk
+      returns an empty list that reads as a legitimate answer.
+
+  # --- Egg moves are the UNION of the pre-evolution chain ------------------
+  #
+  # Settled against the data, not assumed. Every member of the line that exists
+  # in the queried generation contributes its egg list; the answer is the union.
+  # Both naive readings lose real moves, and each looks correct on its own.
+  # Verified against Bulbapedia's per-species breeding sections:
+  #   Marill Gen III 13 = marill 8 U azurill 5   (disjoint)
+  #   Marill Gen IV  17 = marill 12 U azurill 7  (2 shared)
+  #   Snorlax Gen IV 10 = snorlax 9 U munchlax 9 (8 shared)
+
+  - name: snorlax_hgss_egg_moves_are_the_union_of_the_line
+    tool: get_learnset
+    args: { pokemon: snorlax, game: heartgold-soulsilver, methods: [egg] }
+    expect:
+      count: 10
+      contains:
+        - { move: fissure, egg_source: snorlax }
+        - { move: zen-headbutt, egg_source: munchlax }
+    why: >-
+      *** The best single case for the union rule. It fails under BOTH naive
+      implementations. *** Base-only returns Munchlax's nine and drops Fissure,
+      which only Snorlax lists. Queried-species-only returns Snorlax's nine and
+      drops Zen Headbutt, which only Munchlax lists. Ten rows with both moves
+      present is reachable only by unioning the chain — and because the two lists
+      share eight moves, a union that forgot to dedupe reports eighteen.
+      The egg_source on each row is what proves the union rather than a coincidence.
+
+  - name: marill_emerald_egg_union_is_thirteen
+    tool: get_learnset
+    args: { pokemon: marill, game: emerald, methods: [egg] }
+    expect:
+      count: 13
+    why: >-
+      Marill's Emerald list (8) and Azurill's (5) are disjoint, so the union is
+      13 — and Marill carrying its own list alongside Azurill's is what proves a
+      species is not dropped from the answer just because it has a baby form.
+
+  - name: marill_hgss_egg_union_is_not_a_sum
+    tool: get_learnset
+    args: { pokemon: marill, game: heartgold-soulsilver, methods: [egg] }
+    expect:
+      count: 17
+    why: >-
+      Pairs with the Emerald case above, which alone cannot distinguish a union
+      from a concatenation because its two lists are disjoint. Here Marill's 12
+      and Azurill's 7 share two moves: the union is 17 where a sum is 19. Both
+      counts must hold or the dedup is wrong in one direction or the other.
+
+  - name: snorlax_emerald_does_not_walk_into_munchlax
+    tool: get_learnset
+    args: { pokemon: snorlax, game: emerald, methods: [egg] }
+    expect:
+      count: 6
+      fields: { egg_moves_from: null }
+    why: >-
+      The generation gate on the walk (PLAN.md §0.2). Munchlax is Gen 4 and has
+      zero Emerald egg rows, so a generation-blind walk reports "egg moves from
+      munchlax" and returns nothing — a species that does not exist in the game,
+      named as the source of an empty answer. Eight Emerald species hit this:
+      Chansey, Blissey, Snorlax, Mantine, Mr. Mime, Sudowoodo, Roselia, Chimecho.
+
+  - name: blissey_emerald_walk_stops_one_rung_down_at_chansey
+    tool: get_learnset
+    args: { pokemon: blissey, game: emerald, methods: [egg] }
+    expect:
+      count: 5
+      fields: { egg_moves_from: chansey }
+    why: >-
+      The generation gate must stop the walk at the right rung, not stop it
+      early. Snorlax and Mantine bottom out at themselves, so for them a walk
+      that never moved would also pass. Blissey's chain really does descend — to
+      Chansey, which exists in Gen 3 — and must not continue to Happiny, which
+      does not. Blissey has zero egg rows of its own, so all five come from Chansey.
+
+  - name: pikachu_emerald_egg_moves_come_from_pichu
+    tool: get_learnset
+    args: { pokemon: pikachu, game: emerald, methods: [egg] }
+    expect:
+      count: 7
+      fields: { egg_moves_from: pichu }
+    why: >-
+      PokeAPI drops a species' egg list when it is not itself hatchable: Pikachu,
+      Clefairy and Jigglypuff have zero egg rows in every version group while
+      Pichu, Cleffa and Igglybuff carry theirs. A queried-species-only reading
+      returns an empty list for three of the most commonly used Pokemon in the games.
+
+  - name: azumarill_emerald_names_both_contributing_species
+    tool: get_learnset
+    args: { pokemon: azumarill, game: emerald, methods: [egg] }
+    expect:
+      count: 13
+      contains:
+        - { egg_source: marill }
+        - { egg_source: azurill }
+    why: >-
+      egg_moves_from can only name one species, so per-row egg_source is the only
+      thing that makes union provenance honest. Azumarill draws from both Marill
+      and Azurill; a reader seeing only egg_moves_from: azurill would conclude all
+      thirteen are Azurill's, when eight are Marill's and unobtainable from an
+      Azurill that never evolved.
+
+  # --- C3: a TM label on a row that no TM teaches --------------------------
+
+  - name: psyduck_emerald_psychic_carries_no_tm
+    tool: can_learn
+    args: { pokemon: psyduck, moves: [psychic], game: emerald }
+    expect:
+      all_legal: true
+      contains:
+        - { move: psychic, tm: null }
+    why: >-
+      The `machines` table records only that SOME TM in this game teaches a move,
+      not that this Pokemon can use it. A join missing the learn-method predicate
+      hands that TM's label to every egg, tutor and level-up row for the same
+      move — 27 such rows in Emerald, 38 in HGSS. "Psyduck learns Psychic — TM29"
+      is a sentence a model repeats verbatim, and it sends the player to buy a TM
+      that will not work. all_legal stays true: the move IS learnable, just not by TM.
+
+  - name: feebas_emerald_light_screen_carries_no_tm
+    tool: can_learn
+    args: { pokemon: feebas, moves: [light-screen], game: emerald }
+    expect:
+      all_legal: true
+      contains:
+        - { move: light-screen, tm: null }
+    why: >-
+      Second instance of the same defect on a different species, so a fix that
+      special-cases one row is still caught.
+
+  - name: psyduck_emerald_egg_row_for_psychic_carries_no_tm
+    tool: get_learnset
+    args: { pokemon: psyduck, game: emerald, methods: [egg] }
+    expect:
+      contains:
+        - { move: psychic, method: egg, tm: null }
+    why: >-
+      The get_learnset half of psyduck_emerald_psychic_carries_no_tm, and NOT
+      redundant with it. Two independent things suppress the spurious label: the
+      `machines` join carries a learn-method predicate, and can_learn's verdict
+      builder filters to machine rows in Python. Measured by mutation, breaking
+      either one alone leaves the can_learn case green — so only asserting on
+      both tools catches a single-layer regression.
+
+  - name: feebas_emerald_egg_row_for_light_screen_carries_no_tm
+    tool: get_learnset
+    args: { pokemon: feebas, game: emerald, methods: [egg] }
+    expect:
+      contains:
+        - { move: light-screen, method: egg, tm: null }
+    why: >-
+      Same pairing for Feebas. Light Screen has an Emerald TM (TM16) and Feebas
+      learns it only by breeding, so a method-blind join labels the egg row TM16.
+
+  # --- The two tools must agree --------------------------------------------
+
+  - name: snorlax_hgss_can_learn_agrees_on_both_union_halves
+    tool: can_learn
+    args:
+      pokemon: snorlax
+      moves: [fissure, zen-headbutt]
+      game: heartgold-soulsilver
+    expect:
+      all_legal: true
+      contains:
+        - { move: fissure, egg_source: snorlax }
+        - { move: zen-headbutt, egg_source: munchlax }
+    why: >-
+      can_learn is PLAN.md §0.4's hallucination guard, and a guard that answers a
+      different question from get_learnset is worse than no guard — it launders a
+      wrong answer through something that looks like verification. This is the
+      same union assertion as snorlax_hgss_egg_moves_are_the_union_of_the_line,
+      posed to the other tool: both halves of the union must come back legal with
+      the same per-row provenance. When the two had separate SQL they disagreed
+      about Marill's Emerald egg moves in opposite directions.
+
+  - name: swampert_emerald_can_learn_agrees_on_the_inherited_egg_move
+    tool: can_learn
+    args: { pokemon: swampert, moves: [curse], game: emerald }
+    expect:
+      all_legal: true
+      contains:
+        - { move: curse, egg_source: mudkip }
+    why: >-
+      The base-form walk has to hold on the can_learn side too. Curse is
+      Mudkip's, not Swampert's; a can_learn that skipped the walk calls a legal
+      moveset illegal, which is the failure mode that makes a team builder
+      useless in the opposite direction from a cross-gen leak.
+
+  # --- Gen-correct move values: the move_changelog backwards walk (§0.6.2) ---
+  #
+  # PLAN.md §0.6.2 says reversing this walk "yields plausible, wrong numbers
+  # rather than an error" and asks for its own eval. Every expectation below was
+  # checked against actual game history, not transcribed from the implementation.
+
+  - name: dig_is_60_bp_in_emerald
+    tool: get_move
+    args: { move: dig, game: emerald }
+    expect:
+      fields: { power: 60, differs_from_latest: true }
+    why: >-
+      Dig was 100 BP in Gen 1, 60 in Gen 2-3, 80 from Gen 4 on. Reversing the
+      changelog walk returns 100 here — a real base power from the wrong decade,
+      with nothing anywhere raising.
+
+  - name: dig_is_80_bp_in_hgss
+    tool: get_move
+    args: { move: dig, game: heartgold-soulsilver }
+    expect:
+      fields: { power: 80, differs_from_latest: false }
+    why: >-
+      HGSS is after the Gen 4 buff, so no rollback applies and the current value
+      stands. Pairs with the Emerald case to pin both branches of the walk.
+
+  - name: petal_dance_is_70_bp_in_emerald
+    tool: get_move
+    args: { move: petal-dance, game: emerald }
+    expect:
+      fields: { power: 70, pp: 20 }
+    why: >-
+      Petal Dance was 70 BP / 20 PP in Gen 1-3, 90/20 in Gen 4, 120/10 from Gen 5.
+      The PP here comes from a *different, later* changelog row than the power,
+      so this case also fails if the walk is per-row instead of per-field.
+
+  - name: petal_dance_is_90_bp_in_hgss
+    tool: get_move
+    args: { move: petal-dance, game: heartgold-soulsilver }
+    expect:
+      fields: { power: 90, pp: 20 }
+    why: >-
+      *** The two launch games must DISAGREE here (70 vs 90). ***
+      No version-group-insensitive implementation can satisfy both this case and
+      the Emerald one. Do not "simplify" either away.
+
+  - name: thunder_power_rolls_back_but_effect_chance_does_not
+    tool: get_move
+    args: { move: thunder, game: emerald }
+    expect:
+      fields: { power: 120, effect_chance: 30 }
+    why: >-
+      Thunder's power comes from a Gen 6 change-point (120 BP through Gen 5)
+      while its paralysis chance stays at today's 30% — the Gen 1 row naming
+      effect_chance sits *before* Emerald. Only a genuinely per-field walk
+      produces (120, 30); any per-row walk drags the Gen 1 10% along.
+
+  - name: bite_is_dark_in_emerald
+    tool: get_move
+    args: { move: bite, game: emerald }
+    expect:
+      fields: { type: dark, differs_from_latest: false }
+    why: >-
+      Bite was Normal in Gen 1 and Dark from Gen 2. Its only changelog row
+      predates Emerald, so nothing applies — and differs_from_latest must stay
+      false rather than being set because the move merely *has* history.
+
+  - name: draco_meteor_is_unavailable_in_emerald_not_absent
+    tool: get_move
+    args: { move: draco-meteor, game: emerald }
+    expect:
+      fields: { available_in_game: false }
+    why: >-
+      A Gen 4 move exists in the moves table regardless of the game asked about.
+      available_in_game is the only thing stopping its card from reading as an
+      Emerald move's card.
+
+  # --- Gen-correct species values: the three *_past overlays ----------------
+
+  - name: clefable_is_normal_in_hgss_not_fairy
+    tool: find_pokemon
+    args: { pokemon: clefable, game: heartgold-soulsilver }
+    expect:
+      fields: { types: [normal] }
+    why: >-
+      The regression that prompted pokemon_types_past. Fairy did not exist until
+      Gen 6. This value flows straight into type-coverage advice, so a Fairy
+      Clefable makes every resistance calculation for an HGSS team wrong while
+      looking entirely reasonable.
+
+  - name: jigglypuff_hgss_typing_is_whole_list_replaced
+    tool: find_pokemon
+    args: { pokemon: jigglypuff, game: heartgold-soulsilver }
+    expect:
+      fields: { types: [normal] }
+    why: >-
+      pokemon_types_past is a whole-list replacement, not a per-slot merge.
+      Jigglypuff's Gen 5 row lists only slot 1 (Normal) against a current
+      Normal/Fairy; a per-slot merge leaves Fairy attached and returns
+      [normal, fairy].
+
+  - name: butterfree_hgss_special_attack_is_80
+    tool: find_pokemon
+    args: { pokemon: butterfree, game: heartgold-soulsilver }
+    expect:
+      contains: ['"special_attack": 80']
+    why: >-
+      pokemon_stats_past is a per-stat override. Butterfree's SpA was 80 through
+      Gen 5 and 90 after, recorded as one row — whole-list replacement would
+      leave Butterfree with a single stat and zeroes elsewhere.
+
+  - name: typhlosion_hgss_has_no_hidden_ability
+    tool: find_pokemon
+    args: { pokemon: typhlosion, game: heartgold-soulsilver }
+    expect:
+      fields: { types: [fire] }
+      contains: ["hidden abilit"]
+    why: >-
+      Typhlosion has zero pokemon_abilities_past rows, so the overlay alone
+      leaves Flash Fire — a Gen 5 Dream World ability — on a Gen 4 card. The
+      FIRST_HIDDEN_ABILITY_GENERATION rule removes it, and PLAN.md §3.9 requires
+      the omission be disclosed rather than silent, hence the note check.
+
+  # --- Tier 2: the "where" questions PokeAPI cannot answer ------------------
+
+  - name: leftovers_acquisition_from_bulbapedia
+    tool: wiki_lookup
+    args: { page: "Leftovers", section_name: "Acquisition" }
+    expect:
+      max_bytes: 8000
+      contains: ["Snorlax"]
+    why: >-
+      Item acquisition has no PokeAPI field of any kind (PLAN.md §0.2). Also
+      guards the response-size discipline: section-scoped, parsed, never raw
+      wikitext crossing the tool boundary (PLAN.md §6.7).
+
+  - name: hgss_move_tutor_section
+    tool: wiki_lookup
+    args: { page: "Move Tutor", section_name: "HeartGold and SoulSilver" }
+    expect:
+      max_bytes: 8000
+    why: >-
+      Tutor NPC locations and Heart Scale costs are absent from PokeAPI. Section
+      *indexes* are unstable across pages (PLAN.md §0.1) — this case fails if the
+      resolver ever regresses to hardcoded indexes.
+
+  # --- Coverage honesty ----------------------------------------------------
+
+  - name: feebas_emerald_reports_coverage_gap
+    tool: where_to_find
+    args: { pokemon: feebas, game: emerald }
+    expect:
+      source_not: "silently-empty"
+    why: >-
+      Emerald has ~1,647 encounter rows vs HGSS's 6,205 (PLAN.md §0.2), and Feebas
+      is condition-gated. A thin-data answer must be reported as low-confidence or
+      fallen through to Bulbapedia — never returned as a complete empty list.
+      PLAN.md §3.9: silent gap-filling is how a team builder confidently
+      recommends a Pokemon you cannot catch.
