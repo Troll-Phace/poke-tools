@@ -204,14 +204,60 @@ def serialize(result: Any) -> bytes:
     return json.dumps(payload, default=str, ensure_ascii=False).encode("utf-8")
 
 
+def _values_match(actual: Any, expected: Any) -> bool:
+    """Compare one field value against a case's expectation, by type.
+
+    **This used to be ``str(actual).lower() == str(expected).lower()``**, which
+    was not vacuous — it did catch real drift — but it forced every list-valued
+    expectation to be written as a Python ``repr`` string::
+
+        versions: "['heartgold', 'soulsilver']"
+
+    That is a trap for whoever writes the next case. The comparison was sensitive
+    to quote style, to the space after the comma, and to Python's repr of the
+    element type, none of which a YAML author has any reason to reproduce
+    exactly — and every one of those mistakes fails as "no row matched", the same
+    message a genuine regression produces. Worse, ``expected: [heartgold]``
+    written the *natural* way stringified to ``"['heartgold']"`` on both sides
+    only by coincidence of formatting.
+
+    So: lists compare elementwise and order-sensitively (``versions`` and
+    ``conditions`` are both emitted sorted, so order is part of the answer),
+    strings compare case-insensitively, and everything else compares by value
+    with ``bool`` kept distinct from ``int`` — otherwise ``available_in_game:
+    false`` would match a ``0`` and ``true`` would match a ``1``.
+    """
+    if isinstance(expected, bool) or isinstance(actual, bool):
+        return actual is expected
+    if actual is None or expected is None:
+        return actual is expected
+    if isinstance(expected, str) and isinstance(actual, str):
+        return actual.lower() == expected.lower()
+    if isinstance(expected, list | tuple) and isinstance(actual, list | tuple):
+        return len(actual) == len(expected) and all(
+            _values_match(a, e) for a, e in zip(actual, expected, strict=True)
+        )
+    if isinstance(expected, dict) and isinstance(actual, dict):
+        return expected.keys() == actual.keys() and all(
+            _values_match(actual[key], expected[key]) for key in expected
+        )
+    if type(actual) is not type(expected) and not (
+        isinstance(expected, int | float) and isinstance(actual, int | float)
+    ):
+        # A type mismatch is a case-authoring error, not a near miss. Returning
+        # False rather than falling back to a string comparison is what makes the
+        # old repr-string style fail loudly instead of silently still working.
+        return False
+    return actual == expected
+
+
 def _row_matches(row: Any, expected: dict[str, Any]) -> bool:
     """True when ``row`` contains every key/value in ``expected`` (subset match)."""
     actual = _as_dict(row) if not isinstance(row, dict) else row
     if not actual:
         return False
     return all(
-        key in actual and str(actual[key]).lower() == str(value).lower()
-        for key, value in expected.items()
+        key in actual and _values_match(actual[key], value) for key, value in expected.items()
     )
 
 
@@ -285,17 +331,49 @@ def _check_fields(case: EvalCase, result: Any, context: str) -> None:
     for name, expected in case.expect["fields"].items():
         assert name in payload, f"result has no field {name!r}{context}"
         actual = payload[name]
-        assert actual == expected, f"field {name!r}: expected {expected!r}, got {actual!r}{context}"
+        if isinstance(expected, bool) or expected is None:
+            # Identity, not equality. `available_in_game` is three-valued —
+            # True / False / None, where None means "upstream records nothing,
+            # so this is unknown rather than denied" — and `False == 0` and
+            # `True == 1` in Python, so `==` would let a count or a rarity
+            # satisfy a `false` expectation. The field exists to keep those
+            # three answers distinct; the assertion on it has to as well.
+            assert actual is expected, (
+                f"field {name!r}: expected {expected!r}, got {actual!r}{context}"
+            )
+        else:
+            assert actual == expected, (
+                f"field {name!r}: expected {expected!r}, got {actual!r}{context}"
+            )
 
 
 def _check_source_not(case: EvalCase, result: Any, context: str) -> None:
     """Coverage-honesty assertion (PLAN.md §3.9).
 
-    ``source_not: "silently-empty"`` is the only sentinel value: an empty result
-    is acceptable *only* when the tool also says the data is thin — via a
-    Bulbapedia fallback, a confidence marker, or an explicit note. An empty list
-    returned as if it were a complete answer is the failure being guarded.
-    Any other value is checked as a literal ``source`` inequality.
+    ``source_not: "silently-empty"`` is the only sentinel value; any other value
+    is checked as a literal ``source`` inequality.
+
+    **Tightened once the contract was chosen.** This check was written before any
+    location tool existed, so it accepted any of five plausible honesty signals —
+    ``confidence``, ``coverage_note``, a generic ``note``, a ``complete: false``
+    flag, or a Bulbapedia source. That breadth was right while the shape was
+    unknown and is a liability now: a response that dropped ``confidence`` would
+    still pass on ``note`` alone, which is exactly the drift the eval suite
+    exists to catch.
+
+    The implemented contract is two fields — :data:`~poke_tools.models.Confidence`
+    and ``coverage_note`` — so both are required to be present, and the rule that
+    binds them is asserted rather than either one alone:
+
+    * ``confidence`` must be one of the three declared values.
+    * ``coverage_note`` may be null **only** when ``confidence`` is ``high`` and
+      rows were found. An empty answer always explains itself, including the one
+      empty answer that is complete (a species postdating the game).
+    * ``low`` means no rows; returning rows alongside it is the two signals
+      contradicting each other.
+
+    A live Bulbapedia result is still accepted on its ``source`` alone: Tier 2 is
+    Phase 3 and has not chosen its coverage fields yet.
     """
     forbidden = case.expect["source_not"]
     payload = _as_dict(result)
@@ -305,20 +383,29 @@ def _check_source_not(case: EvalCase, result: Any, context: str) -> None:
         assert source != forbidden, f"source was {source!r}, which is disallowed{context}"
         return
 
-    if extract_rows(result):
+    if source == "bulbapedia":
         return
 
-    honest = (
-        source == "bulbapedia"
-        or payload.get("confidence") in {"low", "partial"}
-        or bool(payload.get("coverage_note"))
-        or bool(payload.get("note"))
-        or payload.get("complete") is False
+    rows = extract_rows(result)
+    confidence = payload.get("confidence")
+    note = payload.get("coverage_note")
+
+    assert confidence in {"high", "partial", "low"}, (
+        f"result carries no usable `confidence` signal (got {confidence!r}); PLAN.md §3.9 "
+        f"requires the structured half of the coverage contract{context}"
     )
-    assert honest, (
-        "empty result returned with no low-confidence / fallback signal; "
-        f"got source={source!r} and no coverage note{context}"
-    )
+    if note is None:
+        assert confidence == "high", (
+            f"confidence is {confidence!r} with no `coverage_note` to explain it{context}"
+        )
+        assert rows, (
+            f"empty result returned as a complete answer: no rows, no coverage note{context}"
+        )
+    if confidence == "low":
+        assert not rows, (
+            f"confidence is 'low' but {len(rows)} row(s) were returned — the two "
+            f"coverage signals contradict each other{context}"
+        )
 
 
 def run_case(case: EvalCase) -> Any:

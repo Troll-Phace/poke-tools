@@ -55,7 +55,9 @@ from poke_tools.ingest.pokeapi_csv import IngestError, SourceFile
 #: untouched. That is what stops a Phase 3 parser change from silently
 #: resurrecting old-format payloads into new parser code — see
 #: :func:`_rescue_wiki_cache`.
-SCHEMA_VERSION = "2"
+#: 3 — added ``item_game_indices`` and ``pokemon_items`` so ``get_item`` can say
+#: whether an item exists in the requested game at all, and who holds it wild.
+SCHEMA_VERSION = "3"
 
 #: Where downloaded sources live, relative to the database. Gitignored.
 CACHE_DIRNAME = "source-cache"

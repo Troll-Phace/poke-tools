@@ -96,6 +96,12 @@ SKIPPED_CSVS = {
 #:    §0.6.2's real table name.
 #:  * items/item_prose/machines — ``get_item``, and the TM numbers
 #:    ``get_learnset`` resolves (§0.6.4).
+#:  * item_game_indices — which generations an item exists in. Nothing reads the
+#:    index itself; the row's *presence* is the only structured answer to "is
+#:    this item in this game at all", without which ``get_item`` stamps a Gen 4
+#:    Life Orb card with ``game: emerald`` and no caveat.
+#:  * pokemon_items — held-by-wild rarity, the one clause of §1.3's ``get_item``
+#:    line with no table behind it. Keys on ``version_id``, like ``encounters``.
 #:  * abilities/egg_groups — species card; egg groups also make the base-form
 #:    egg-move walk explicable to a user rather than magic.
 #:  * pokemon_{types,stats,abilities}_past — the gen-correct overlays that keep
@@ -156,6 +162,7 @@ CSV_TABLES: tuple[str, ...] = (
     "item_prose",
     "item_flags",
     "item_flag_map",
+    "item_game_indices",
     "machines",
     # Abilities and egg groups
     "abilities",
@@ -176,6 +183,7 @@ CSV_TABLES: tuple[str, ...] = (
     "pokemon_types",
     "pokemon_abilities",
     "pokemon_egg_groups",
+    "pokemon_items",
     # Gen-correct overlays for the three tables above. Without them find_pokemon
     # answers Emerald and HGSS questions with Gen 9 typings, stats and hidden
     # abilities — see the block comment in schema.sql.

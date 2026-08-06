@@ -38,6 +38,23 @@ Source = Literal["pokeapi", "showdown", "bulbapedia"]
 #: widen an enum a small model has to choose from (§0.4).
 LearnMethod = Literal["level-up", "egg", "tutor", "machine"]
 
+#: How far a location answer can be trusted (PLAN.md §3.9). This is the
+#: structured half of the coverage-honesty contract; :attr:`coverage_note` on the
+#: same responses is the prose half.
+#:
+#: * ``high``    — the local pokédex is believed complete for this question.
+#: * ``partial`` — rows were found, but upstream coverage for this game is known
+#:   to be thin, so absence of a row is not evidence of absence in the game.
+#:   Every Emerald encounter answer is at best ``partial``: PokéAPI holds 1,647
+#:   Emerald encounter rows against HGSS's 6,205 (PLAN.md §0.2).
+#: * ``low``     — no rows at all for a species that does exist in the game. The
+#:   honest reading is "this server does not know", not "you cannot catch it".
+#:
+#: PLAN.md §3.9 is explicit that the Gen 3 gap must not be papered over: silent
+#: gap-filling is how a team builder confidently recommends a Pokémon you cannot
+#: catch. The Bulbapedia fallback that would close it is Tier 2, Phase 3.
+Confidence = Literal["high", "partial", "low"]
+
 #: The field every :class:`PagedResult` subclass must declare.
 ROW_FIELD = "rows"
 
@@ -384,4 +401,272 @@ class MoveCard(SourcedResult):
             "absence of evidence. Power, accuracy and type are much better covered."
         )
     )
+    notes: list[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# where_to_find / list_obtainable
+# ---------------------------------------------------------------------------
+
+
+class EncounterRow(BaseModel):
+    """One collapsed encounter: a place, a way, a level band, and its conditions.
+
+    **A row is not an ``encounters`` row.** Upstream stores one row per version
+    per slot, so the raw table both duplicates encounters across HeartGold and
+    SoulSilver and splits a single in-game grass table across up to twelve slot
+    rows. The collapse that produces this model is documented on
+    :func:`poke_tools.tools.locations.where_to_find`.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    location: str = Field(
+        description="Where, e.g. 'Route 36' or 'Johto Safari Zone (Rocky Beach)'."
+    )
+    method: str = Field(
+        description=(
+            "How: 'walk', 'surf', 'old-rod', 'good-rod', 'super-rod', 'headbutt', "
+            "'rock-smash', 'static', 'gift', 'npc-trade', and a few one-offs."
+        )
+    )
+    min_level: int
+    max_level: int
+    rarity_percent: int | None = Field(
+        default=None,
+        description=(
+            "Combined chance of this encounter within its own method's table, as a "
+            "percentage — the sum over every slot that yields this Pokémon at these "
+            "levels under these conditions. It is not comparable across methods: "
+            "surfing and walking each have their own 100%."
+        ),
+    )
+    conditions: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Requirements that must **all** hold for this row, e.g. "
+            "['radio-off', 'time-morning']. Alternatives are separate rows: morning "
+            "and day appear twice, not as one row listing both. Empty means the "
+            "encounter has no recorded condition."
+        ),
+    )
+    versions: list[str] = Field(
+        description=(
+            "Which versions of the game this encounter is in. HeartGold and "
+            "SoulSilver are one version group but not one game — 385 HeartGold "
+            "encounters and 405 SoulSilver ones have no counterpart in the other, "
+            "so a row listing only one version means exactly that."
+        )
+    )
+
+
+class EncounterList(PagedResult):
+    """The `where_to_find` response."""
+
+    pokemon: str
+    game: str
+    rows: list[EncounterRow]
+    confidence: Confidence
+    coverage_note: str | None = Field(
+        default=None,
+        description=(
+            "Why this answer may be incomplete, or why it is empty. Null only when "
+            "`confidence` is 'high' and rows were found. Read it before concluding "
+            "that a Pokémon cannot be caught."
+        ),
+    )
+    notes: list[str] = Field(default_factory=list)
+
+
+class ObtainableRow(BaseModel):
+    """One species catchable within a badge scope, at its earliest appearance."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    pokemon: str = Field(description="Canonical species identifier, e.g. 'mr-mime'.")
+    min_level: int = Field(description="Lowest level it appears at within this badge scope.")
+    method: str = Field(description="How it is obtained at that earliest appearance.")
+    location: str = Field(description="Where that earliest appearance is.")
+    location_count: int = Field(
+        description="How many distinct areas it appears in within this badge scope."
+    )
+    versions: list[str] = Field(description="Versions this species is obtainable in.")
+
+
+class ObtainableList(PagedResult):
+    """The `list_obtainable` response — the playthrough / Nuzlocke workhorse.
+
+    **Badge scoping is approximate by construction (PLAN.md §3.8.)** True
+    story-progression gating is not in any structured source, so badges are used
+    as a proxy and the rule actually applied is reported in
+    :attr:`level_cap` and :attr:`scope_note` rather than being left implicit.
+    """
+
+    game: str
+    badges: int = Field(description="Badge count the answer was scoped to.")
+    level_cap: int = Field(
+        description=(
+            "The approximate in-game level ceiling at this badge count. Only "
+            "encounters whose minimum level is at or below this are listed."
+        )
+    )
+    approximate: bool = Field(
+        default=True,
+        description=(
+            "Always true. Badge scoping is a proxy for story progression, not a "
+            "gate read from the data — see `scope_note`."
+        ),
+    )
+    scope_note: str = Field(description="Exactly which rule was applied, in words.")
+    rows: list[ObtainableRow]
+    confidence: Confidence
+    coverage_note: str | None = None
+    notes: list[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# get_item
+# ---------------------------------------------------------------------------
+
+
+class HeldItemRow(BaseModel):
+    """One species that carries this item when caught wild, and how often.
+
+    The single acquisition route PokéAPI *does* record — not a location, but a
+    Pokémon. It is the answer to "where do I get Leftovers in HeartGold": catch a
+    Snorlax.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    pokemon: str = Field(description="Canonical species identifier, e.g. 'snorlax'.")
+    rarity_percent: int = Field(
+        ge=0,
+        le=100,
+        description=(
+            "Percentage of wild members of this species holding the item. 100 means "
+            "every one of them."
+        ),
+    )
+    versions: list[str] = Field(
+        description="Versions the holding is recorded in, within the requested game."
+    )
+
+
+class ItemCard(SourcedResult):
+    """The `get_item` response.
+
+    Covers what the pokédex holds: effect, category, cost, fling, whether the
+    item is a TM or HM in the requested game, and which wild Pokémon carry it.
+    **Acquisition beyond that — "which route is Leftovers lying on" — is not in
+    PokéAPI in any form** (PLAN.md §0.2: no field of any kind), which is the
+    reason the Bulbapedia tier exists. `acquisition_note` says so rather than
+    letting the omission read as "nowhere".
+
+    `available_in_game` exists because the rest of this card is
+    generation-agnostic. Every field below except `tm` reads the same for a
+    Generation 4 item asked about in Emerald as for one that is really there, so
+    without an explicit availability verdict the card is an affirmative — and
+    false — assertion that Life Orb is an Emerald item.
+    """
+
+    item: str = Field(description="Canonical item identifier, e.g. 'leftovers'.")
+    name: str
+    game: str
+    available_in_game: bool | None = Field(
+        default=None,
+        description=(
+            "Whether this item exists in the requested game. True when upstream "
+            "records the item in that game's generation, false when it records the "
+            "item but not for that generation (Life Orb and Choice Scarf are "
+            "Generation 4 and false for Emerald), and **null when upstream has no "
+            "generation index for the item at all** — 49 items are in that state, and "
+            "null there means 'not recorded', never 'no'. When this is false the "
+            "effect, cost and fling fields still describe the item, but the item is "
+            "not obtainable in this game and must not be put on a team for it."
+        ),
+    )
+    category: str
+    pocket: str
+    cost: int | None = Field(
+        default=None, description="Poké Mart price. 0 means the item is not sold."
+    )
+    fling_power: int | None = Field(
+        default=None, description="Base power when flung. Fling is Generation 4+."
+    )
+    fling_effect: str | None = None
+    short_effect: str | None = Field(
+        default=None, description="One-line effect summary. Null when upstream has no prose."
+    )
+    flags: list[str] = Field(
+        default_factory=list,
+        description=(
+            "e.g. 'holdable', 'consumable', 'usable-in-battle'. Upstream's flag map is "
+            "partial — 615 rows across the whole item table — so an empty list means "
+            "'not recorded', not 'none of these apply'."
+        ),
+    )
+    tm: str | None = Field(
+        default=None, description="TM/HM label in this game, when the item is a machine."
+    )
+    teaches_move: str | None = Field(
+        default=None, description="The move this machine teaches, when the item is a machine."
+    )
+    held_by: list[HeldItemRow] = Field(
+        default_factory=list,
+        description=(
+            "Wild Pokémon that carry this item in this game, rarest information in the "
+            "card and the only acquisition route upstream records at all. An empty list "
+            "means no wild holder is recorded — not that the item is unobtainable; most "
+            "items are found on the ground or bought, and none of that is in this data."
+        ),
+    )
+    acquisition_note: str = Field(
+        description=(
+            "Standing caveat: this server cannot say where the item is found. "
+            "That data is absent from PokéAPI entirely and is answered by the "
+            "Bulbapedia tier, which is not built yet."
+        )
+    )
+    notes: list[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# type_matchup
+# ---------------------------------------------------------------------------
+
+
+class TypeMatchupCard(SourcedResult):
+    """The `type_matchup` response, with a generation-correct chart.
+
+    Two things make this more than a lookup on ``type_efficacy``:
+
+    * The chart is rolled back through ``type_efficacy_past``. For both launch
+      games that means Steel resists Ghost and Dark, which stopped being true in
+      Generation 6 and is *not* what the present-day table says.
+    * Types that did not exist yet are omitted entirely. Fairy is a Generation 6
+      type; listing it as a Clefable weakness in HeartGold would be a confident
+      wrong answer about a matchup the game cannot produce.
+    """
+
+    types: list[str] = Field(description="The one or two types this card describes.")
+    game: str
+    generation: int
+    attacking_super_effective: list[str] = Field(
+        description="Types a move of these type(s) hits for 2x."
+    )
+    attacking_not_very_effective: list[str] = Field(
+        description=(
+            "Types that resist this attacking type. With two types given, only "
+            "types that resist **both** are listed — the ones that wall the pair."
+        )
+    )
+    attacking_no_effect: list[str] = Field(
+        description="Types immune to this attacking type; with two, immune to both."
+    )
+    defending_quad_weak: list[str] = Field(description="Hits this typing for 4x.")
+    defending_weak: list[str] = Field(description="Hits this typing for 2x.")
+    defending_resists: list[str] = Field(description="Hits this typing for 0.5x.")
+    defending_quad_resists: list[str] = Field(description="Hits this typing for 0.25x.")
+    defending_immune: list[str] = Field(description="Cannot damage this typing at all.")
     notes: list[str] = Field(default_factory=list)

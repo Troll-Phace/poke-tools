@@ -427,6 +427,84 @@ def test_items_identifier_is_not_unique(pokedex: sqlite3.Connection) -> None:
     assert ids == [723, 2279]
 
 
+def test_pokemon_items_is_loaded_and_covers_both_launch_games(
+    pokedex: sqlite3.Connection,
+) -> None:
+    """The table behind ``ItemCard.held_by`` — the one acquisition route upstream has.
+
+    Pinned per launch game as well as in total, because the field is
+    ``version_id``-scoped: a load that dropped Emerald's versions entirely would
+    leave 5,448 rows in place and make every Emerald ``held_by`` an empty list,
+    which reads as "nothing carries this" rather than as a missing table.
+    """
+    assert _count(pokedex, "SELECT COUNT(*) FROM pokemon_items") == 5_448
+    assert (
+        _count(pokedex, "SELECT COUNT(*) FROM pokemon_items WHERE version_id IN (9, 15, 16)") == 582
+    )
+    for version_id in (9, 15, 16):
+        assert (
+            _count(pokedex, f"SELECT COUNT(*) FROM pokemon_items WHERE version_id = {version_id}")
+            > 0
+        ), f"version {version_id} has no wild-held item rows"
+
+
+def test_item_game_indices_has_no_primary_key(pokedex: sqlite3.Connection) -> None:
+    """Deliberately relaxed, following the ``location_area_prose`` precedent.
+
+    ``(item_id, generation_id)`` is the natural key and upstream violates it five
+    times: ``elixir`` and ``kings-rock`` each carry two Generation 2 indexes,
+    ``deep-sea-tooth`` two Generation 5, and ``aloraichium-z--held`` and
+    ``holo-caster--red`` ship exact duplicate rows. Declaring the natural key as a
+    PRIMARY KEY would make the *build* fail rather than the query, which is the
+    worst place to find out — so the constraint is relaxed and the fact is
+    recorded here instead.
+
+    Nothing downstream is harmed by the duplicates: ``get_item``'s availability
+    check reads ``SELECT DISTINCT generation_id``, so a repeated row changes no
+    answer. That is what makes relaxing safe, and it is also why a future
+    tightening would look harmless right up until the rebuild.
+    """
+    duplicated = pokedex.execute(
+        "SELECT i.identifier, gi.generation_id, COUNT(*) FROM item_game_indices AS gi "
+        "JOIN items AS i ON i.id = gi.item_id "
+        "GROUP BY gi.item_id, gi.generation_id HAVING COUNT(*) > 1 "
+        "ORDER BY i.identifier"
+    ).fetchall()
+    assert duplicated == [
+        ("aloraichium-z--held", 7, 2),
+        ("deep-sea-tooth", 5, 2),
+        ("elixir", 2, 2),
+        ("holo-caster--red", 8, 2),
+        ("kings-rock", 2, 2),
+    ]
+
+    pk_columns = [
+        row[1] for row in pokedex.execute("PRAGMA table_info(item_game_indices)") if row[5]
+    ]
+    assert pk_columns == [], f"a primary key was added; the build would refuse: {pk_columns}"
+
+
+def test_item_game_indices_is_loaded_and_leaves_items_uncovered(
+    pokedex: sqlite3.Connection,
+) -> None:
+    """The table behind ``ItemCard.available_in_game``, and the hole in it.
+
+    7,296 rows, and **49 item rows with no generation entry at all**. Those 49 are
+    not a load failure — they are the population that makes the field three-valued
+    rather than boolean, so the count is pinned alongside the row total. If a
+    future ingest change filled them in, ``None`` would become unreachable and the
+    unknown-not-denied branch would go untested without any test turning red.
+    """
+    assert _count(pokedex, "SELECT COUNT(*) FROM item_game_indices") == 7_296
+    assert (
+        _count(
+            pokedex,
+            "SELECT COUNT(*) FROM items WHERE id NOT IN (SELECT item_id FROM item_game_indices)",
+        )
+        == 49
+    )
+
+
 def test_showdown_stays_a_separate_cross_check_table(pokedex: sqlite3.Connection) -> None:
     """PLAN.md §1.2.2 / §3.6: Showdown is never merged into ``pokemon_moves``.
 

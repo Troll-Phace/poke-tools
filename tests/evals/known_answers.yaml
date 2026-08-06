@@ -455,3 +455,311 @@ cases:
       fallen through to Bulbapedia — never returned as a complete empty list.
       PLAN.md §3.9: silent gap-filling is how a team builder confidently
       recommends a Pokemon you cannot catch.
+
+  - name: feebas_emerald_is_partial_not_high
+    tool: where_to_find
+    args: { pokemon: feebas, game: emerald }
+    expect:
+      count: 1
+      contains:
+        - { location: "Route 119", method: feebas-tile-fishing }
+      fields:
+        confidence: partial
+    why: >-
+      Thin *and* non-empty is the interesting case. The row above is real, so the
+      easy hedge — "empty results get a caveat" — does not apply; the answer must
+      still be graded `partial` because Emerald's 1,647 encounter rows against
+      HGSS's 6,205 mean absence of a row is not evidence of absence in the game
+      (PLAN.md §0.2, §3.9). `high` here would be the Tier-1 gap-filling §3.9
+      forbids, expressed as a claim rather than as data.
+
+  - name: gible_emerald_is_a_complete_empty_answer
+    tool: where_to_find
+    args: { pokemon: gible, game: emerald }
+    expect:
+      count: 0
+      fields:
+        confidence: high
+      source_not: "silently-empty"
+    why: >-
+      The one empty result that earns `high`. Gible is Generation 4, so "you cannot
+      catch it in Emerald" is complete, not a coverage gap — grading it `low` would
+      hedge a fact the data fully settles. It still carries a coverage_note, which
+      is what `source_not` checks: an empty list with no explanation is
+      indistinguishable from a lookup that quietly failed.
+
+  - name: milotic_emerald_is_low_not_high
+    tool: where_to_find
+    args: { pokemon: milotic, game: emerald }
+    expect:
+      count: 0
+      fields:
+        confidence: low
+      source_not: "silently-empty"
+    why: >-
+      The contrast that keeps `high`-on-empty narrow. Milotic exists in Emerald —
+      it is Feebas's evolution — but has no encounter row because it is
+      evolution-only. Same zero rows as the Gible case, opposite meaning: "this
+      server does not know where", never "you cannot get it". A grading rule that
+      keys on emptiness alone gets one of these two wrong.
+
+  # --- The HGSS two-version encounter collapse (PLAN.md §0.6.3) ------------
+
+  - name: growlithe_hgss_is_heartgold_exclusive
+    tool: where_to_find
+    args: { pokemon: growlithe, game: heartgold-soulsilver }
+    expect:
+      contains:
+        - { location: "Route 36", min_level: 13, rarity_percent: 10, versions: [heartgold] }
+    why: >-
+      Two properties in one row. `versions: [heartgold]` is the version-exclusive
+      annotation surviving the collapse — a dedupe that drops the version column
+      keeps the row and loses the fact, turning "Growlithe is HeartGold-only" into
+      "Growlithe is in HGSS". `rarity_percent: 10` is the per-version rarity sum
+      over Route 36's two 5% slots; reporting 5 means the sum was dropped.
+
+  - name: unown_hgss_rarity_does_not_cross_versions
+    tool: where_to_find
+    args: { pokemon: unown, game: heartgold-soulsilver }
+    expect:
+      count: 4
+      contains:
+        - { rarity_percent: 100, versions: [heartgold, soulsilver] }
+    why: >-
+      Unown holds twelve encounter slots at each Ruins of Alph chamber in *both*
+      versions — 24 raw rows summing to 200%. The truthful answer is 100%: slots
+      are disjoint outcomes of one roll within a version, and the two versions are
+      alternatives, not additions. A rarity sum that groups before splitting on
+      version reports a rate that is not merely wrong but impossible. The count of
+      4 is the second half: one row per chamber, not one per version per chamber.
+
+  - name: mareep_hgss_condition_alternatives_stay_separate
+    tool: where_to_find
+    args: { pokemon: mareep, game: heartgold-soulsilver }
+    expect:
+      contains:
+        - { location: "Route 32", min_level: 6, conditions: [radio-off, time-morning] }
+        - { location: "Route 32", min_level: 6, conditions: [radio-off, time-day] }
+    why: >-
+      `conditions` is a straight AND, so alternatives must be separate rows.
+      Mareep sits in Route 32 slot 5 twice, once in the morning table and once in
+      the day table; merging them on the natural key and unioning the conditions
+      yields [radio-off, time-day, time-morning] on one row, which reads as a
+      conjunction and is false as one — no encounter requires it to be both
+      morning and day. This case fails the moment the condition set leaves the
+      grouping key.
+
+  # --- list_obtainable: badge scoping is approximate and says so (§3.8) ----
+
+  - name: emerald_before_badge_four_is_level_appropriate
+    tool: list_obtainable
+    args: { game: emerald, badges: 3 }
+    expect:
+      fields:
+        total_count: 116
+        level_cap: 29
+        approximate: true
+      contains:
+        - { pokemon: poochyena, min_level: 2, location: "Route 101" }
+    why: >-
+      PLAN.md §2's Phase 2 exit criterion. badges=3 is "before the fourth badge".
+      LEVEL_CAPS is hand-curated — nothing upstream carries trainer levels or badge
+      order — so `approximate: true` and the level_cap being reported at all are
+      what make it defensible under §3.8. A scope filter the reader cannot see is a
+      filter they cannot correct for.
+
+  - name: hgss_walk_filter_returns_rows
+    tool: list_obtainable
+    args: { game: heartgold-soulsilver, badges: 3, method: walk }
+    expect:
+      source_not: "silently-empty"
+    why: >-
+      Regression guard for a caught silent-zero-rows bug. `_scoped_cte` used to
+      leave the caller to append the level cap, which put it *before* the method
+      filter's parameters in the bound sequence; SQLite then compared a method
+      identifier against a level and matched nothing. Zero rows, no error, no
+      warning. A bug that returns a confident empty list deserves a permanent case.
+
+  - name: emerald_headbutt_is_empty_and_says_nothing_matched
+    tool: list_obtainable
+    args: { game: emerald, badges: 0, method: headbutt }
+    expect:
+      count: 0
+      fields:
+        confidence: low
+      source_not: "silently-empty"
+    why: >-
+      The only empty answer either launch game produces, and it shipped graded
+      wrong. `list_obtainable` graded Emerald `partial` *before* checking whether
+      anything matched, which made the zero-row branch unreachable for Emerald: the
+      game with a quarter of HGSS's encounter coverage answered an identical empty
+      question with the *more* confident grade and never said that nothing matched.
+      `low` plus a note that leads with "nothing matched" is the fix; `partial` on
+      zero rows is a claim that an incomplete list exists when none does.
+
+  # --- where_to_find's method filter: truncation is method-shaped ----------
+
+  - name: magikarp_hgss_is_surfable
+    tool: where_to_find
+    args: { pokemon: magikarp, game: heartgold-soulsilver, method: surf }
+    expect:
+      count: 35
+      fields:
+        total_count: 35
+      source_not: "silently-empty"
+    why: >-
+      The blind spot the `method` filter closes. Rows sort by
+      `encounter_methods."order"`, so methods are *contiguous* and the 40-row cap
+      truncates whole methods rather than sampling across them: Magikarp has 261
+      HGSS rows, old-rod fills all of page 1, and surf does not start until index
+      226 — page 6. A model asking "can I surf up a Magikarp" read page 1 and
+      concluded, plausibly and wrongly, that it could not. The filter must return
+      all 35 surf rows on page 1, and 226 fishing + 35 surf must still sum to 261:
+      a filter that partitions is correct, one that drops looks identical here.
+
+  - name: magikarp_hgss_headbutt_miss_does_not_claim_it_is_unfindable
+    tool: where_to_find
+    args: { pokemon: magikarp, game: heartgold-soulsilver, method: headbutt }
+    expect:
+      count: 0
+      fields:
+        confidence: low
+      contains: ["re-run with method='any'"]
+      source_not: "silently-empty"
+    why: >-
+      A filtered miss and a real miss are different claims. Magikarp cannot be
+      headbutted out of a tree and is one of the easiest Pokémon in HGSS to catch,
+      so the unfiltered sentence — "No encounter is recorded for Magikarp in
+      heartgold-soulsilver" — would be flatly false, and it is the sentence a model
+      quotes back. The note must name the filter and hand back the escape hatch.
+      `low` is asserted too: a narrower question is not a more certain one.
+
+  # --- get_item: held_by, and the three-valued availability verdict --------
+
+  - name: leftovers_hgss_names_its_wild_holders
+    tool: get_item
+    args: { item: leftovers, game: heartgold-soulsilver }
+    expect:
+      fields:
+        held_by:
+          - { pokemon: munchlax, rarity_percent: 100, versions: [heartgold, soulsilver] }
+          - { pokemon: snorlax, rarity_percent: 100, versions: [heartgold, soulsilver] }
+    why: >-
+      The one acquisition route PokéAPI records at all (PLAN.md §1.3's held-by-wild
+      rarity clause) — not a location, but a Pokémon: catch a Snorlax. Pinned with
+      the rate and the versions, because a holder without a rate is not an
+      actionable answer and `pokemon_items` keys on `version_id`, so an unscoped
+      query reports holders from every game.
+
+  - name: leftovers_emerald_drops_the_gen_four_holder
+    tool: get_item
+    args: { item: leftovers, game: emerald }
+    expect:
+      fields:
+        held_by:
+          - { pokemon: snorlax, rarity_percent: 100, versions: [emerald] }
+    why: >-
+      The version scoping, on the one item where dropping it is visible. Munchlax
+      is a Generation 4 species and cannot be caught in Emerald at all, so listing
+      it here would be a real Pokémon at a real rate with an impossible
+      instruction attached — a confident wrong answer of exactly the §3.9 kind.
+
+  - name: life_orb_does_not_exist_in_emerald
+    tool: get_item
+    args: { item: life-orb, game: emerald }
+    expect:
+      fields:
+        available_in_game: false
+      contains: ["does not exist in emerald"]
+    why: >-
+      Every field on an item card except `tm` is generation-agnostic, so a Gen 4
+      item asked about in Emerald came back as a clean card stamped `game: emerald`
+      with an empty `notes` list — an affirmative assertion of something false
+      rather than an omission. Life Orb is the first item a competitively-primed
+      model reaches for. The verdict and the sentence are both pinned: a bare
+      boolean in a field a model may not read is not a disclosure.
+
+  - name: choice_band_does_exist_in_emerald
+    tool: get_item
+    args: { item: choice-band, game: emerald }
+    expect:
+      fields:
+        available_in_game: true
+    why: >-
+      The control that keeps `false` from meaning "anything competitive in a Gen 3
+      game". Choice Band is Generation 3 and genuinely there, so a check that
+      denied every held item would fail here rather than look appropriately strict.
+
+  - name: oaks_parcel_availability_is_unknown_not_denied
+    tool: get_item
+    args: { item: oaks-parcel, game: emerald }
+    expect:
+      fields:
+        available_in_game: null
+      contains: ["unknown"]
+    why: >-
+      *** The §3.9 trap pointing the other way. *** 48 reachable identifiers carry
+      no `item_game_indices` row of any generation. `_availability` returns `false`
+      only when the item has rows for some *other* generation; no rows at all is
+      `null` plus an unknown-not-denied note. Collapsing `null` into `false` — the
+      obvious one-line simplification, and the shape the field takes the moment
+      someone types it `bool` — manufactures 48 false "this item does not exist in
+      Emerald" claims, which is the same invented-fact error the field exists to
+      prevent. `fields` compares this one by identity, so `false` cannot satisfy it.
+
+  - name: tm92_emerald_explains_both_its_null_fields
+    tool: get_item
+    args: { item: tm92, game: emerald }
+    expect:
+      fields:
+        available_in_game: false
+        tm: null
+      contains: ["does not exist in emerald", "machine list"]
+    why: >-
+      Two notes that look redundant and are not. The availability note frames the
+      whole card; the machine note explains one specific null field, since a bare
+      null `tm` reads as "this is not a TM at all" — a different and wrong claim.
+      The second was once suppressed as redundant when availability already said
+      the item was absent, which left a reader asking "why is `tm` empty" to infer
+      it from a sentence about generations.
+
+  # --- type_matchup: the *_past walk direction (PLAN.md §0.6.2) ------------
+
+  - name: emerald_steel_resists_dark
+    tool: type_matchup
+    args: { type1: dark, game: emerald }
+    expect:
+      fields:
+        attacking_not_very_effective: [fighting, steel, dark]
+    why: >-
+      The two Generation 5 type_efficacy_past rows (ghost->steel 50, dark->steel
+      50) are the *only* rows making these games' charts correct, and the *_past
+      convention — smallest generation_id >= G — is what selects them for
+      Generation 3. Drop the overlay and the tool reports the present-day 1x, which
+      is the answer the model already had and the reason this tool exists.
+
+  - name: emerald_poison_is_not_super_effective_against_bug
+    tool: type_matchup
+    args: { type1: poison, game: emerald }
+    expect:
+      fields:
+        attacking_super_effective: [grass]
+    why: >-
+      The other direction, and the one most likely to be "fixed" into a bug: the
+      intuition that older games need the *older* rows is wrong here. All four
+      Generation 1 past rows changed in Generation 2, so none applies to Emerald.
+      A walk reverted to pick the largest generation_id <= G selects them and turns
+      Poison super effective against Bug — plausible-looking and silent. Its
+      sibling failure, Ghost being unable to damage Psychic, is worse.
+
+  - name: hgss_clefable_typing_has_no_fairy_matchup
+    tool: type_matchup
+    args: { type1: normal, game: heartgold-soulsilver }
+    expect:
+      fields:
+        generation: 4
+    why: >-
+      Fairy is Generation 6. Listing it as a Normal-type matchup in HeartGold would
+      be a confident wrong answer about a matchup the cartridge cannot produce, so
+      it never enters the chart at all. The generation field is pinned because a
+      gen-correct chart that does not say which generation cannot be checked.

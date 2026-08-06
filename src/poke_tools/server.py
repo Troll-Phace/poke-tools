@@ -42,10 +42,26 @@ from pydantic import BaseModel, Field
 from poke_tools import __version__, db
 from poke_tools.db import DB_PATH_ENV_VAR, DatabaseUnavailableError, resolve_db_path
 from poke_tools.games import SUPPORTED_GAMES, Game
-from poke_tools.models import LearnMethod, Learnset, LegalityReport, MoveCard, SpeciesCard
+from poke_tools.models import (
+    EncounterList,
+    ItemCard,
+    LearnMethod,
+    Learnset,
+    LegalityReport,
+    MoveCard,
+    ObtainableList,
+    SpeciesCard,
+    TypeMatchupCard,
+)
+from poke_tools.tools.analysis import PokemonType
+from poke_tools.tools.analysis import type_matchup as _type_matchup
 from poke_tools.tools.dex import find_pokemon as _find_pokemon
+from poke_tools.tools.items import get_item as _get_item
 from poke_tools.tools.learnset import can_learn as _can_learn
 from poke_tools.tools.learnset import get_learnset as _get_learnset
+from poke_tools.tools.locations import MethodGroup
+from poke_tools.tools.locations import list_obtainable as _list_obtainable
+from poke_tools.tools.locations import where_to_find as _where_to_find
 from poke_tools.tools.moves import get_move as _get_move
 
 
@@ -276,6 +292,130 @@ async def get_move(
 ) -> MoveCard:
     """Look up one move's stats as of the given game."""
     return _get_move(move, game, conn=_connection(ctx))
+
+
+@mcp.tool(
+    title="Where to find",
+    description=(
+        "Every recorded encounter for one Pokémon in one game: place, method, level "
+        "range, encounter rate and conditions. HeartGold and SoulSilver are reported "
+        "together — a row naming only one of them is exclusive to that version. Read "
+        "`confidence` and `coverage_note` before concluding a Pokémon is uncatchable; "
+        "Emerald's encounter data is thin upstream and an empty result usually means "
+        "'not recorded here' rather than 'not in the game'. Results group by method, so "
+        "when you care about one way of catching it — surfing, a particular rod — pass "
+        "`method` rather than scanning pages; a heavily-encountered Pokémon can fill the "
+        "first page with a single method."
+    ),
+    annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False),
+)
+async def where_to_find(
+    ctx: Context,
+    pokemon: PokemonArg,
+    game: GameArg,
+    method: Annotated[
+        MethodGroup,
+        Field(
+            description=(
+                "Restrict to one way of encountering. 'any' (the default) returns every "
+                "method, including static, gift and in-game-trade entries."
+            )
+        ),
+    ] = "any",
+    offset: OffsetArg = 0,
+    limit: LimitArg = db.MAX_ROWS,
+) -> EncounterList:
+    """Encounters for one Pokémon in one game."""
+    return _where_to_find(
+        pokemon, game, method=method, offset=offset, limit=limit, conn=_connection(ctx)
+    )
+
+
+@mcp.tool(
+    title="List obtainable",
+    description=(
+        "What can be caught in a game by a given point in the story, earliest first — "
+        "the playthrough and Nuzlocke workhorse. Progress is given as badges already "
+        "earned, so 'before the fourth badge' is badges=3. The scoping is approximate: "
+        "it filters on an in-game level ceiling rather than real story gating, and the "
+        "response says exactly what rule it applied in `scope_note`."
+    ),
+    annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False),
+)
+async def list_obtainable(
+    ctx: Context,
+    game: GameArg,
+    badges: Annotated[
+        int,
+        Field(
+            ge=0,
+            le=16,
+            description=(
+                "Badges already earned. 0-8 for Emerald, 0-16 for HeartGold/SoulSilver "
+                "(9-16 are the Kanto badges). 'Before badge 4' is 3."
+            ),
+        ),
+    ],
+    method: Annotated[
+        MethodGroup,
+        Field(
+            description=(
+                "Restrict to one way of encountering. 'any' includes gift, static and "
+                "in-game-trade entries, which carry fixed low levels and so sort early."
+            )
+        ),
+    ] = "any",
+    offset: OffsetArg = 0,
+    limit: LimitArg = db.MAX_ROWS,
+) -> ObtainableList:
+    """Species obtainable at a given badge count."""
+    return _list_obtainable(
+        game, badges, method=method, offset=offset, limit=limit, conn=_connection(ctx)
+    )
+
+
+@mcp.tool(
+    title="Get item",
+    description=(
+        "Item data: effect, category, cost, fling, the TM/HM number and taught move when "
+        "the item is a machine in this game, and which wild Pokémon carry it. **Check "
+        "`available_in_game` before putting an item on a team** — the item table is not "
+        "game-scoped, so Life Orb and Choice Scarf resolve to full cards even for Emerald, "
+        "where they do not exist. Beyond wild holders it cannot say where an item is found; "
+        "that data is absent from this server's source entirely, and the response says so "
+        "rather than implying the item is unobtainable."
+    ),
+    annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False),
+)
+async def get_item(
+    ctx: Context,
+    item: Annotated[str, Field(description="Item name, e.g. 'leftovers' or 'Leftovers'.")],
+    game: GameArg,
+) -> ItemCard:
+    """Look up one item."""
+    return _get_item(item, game, conn=_connection(ctx))
+
+
+@mcp.tool(
+    title="Type matchup",
+    description=(
+        "Offensive and defensive matchups for one or two types, with the chart that game "
+        "actually used. Steel resists Ghost and Dark in both supported games, and Fairy "
+        "does not exist in either — so prefer this over recalled type charts."
+    ),
+    annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False),
+)
+async def type_matchup(
+    ctx: Context,
+    type1: Annotated[PokemonType, Field(description="First type, e.g. 'water'.")],
+    game: GameArg,
+    type2: Annotated[
+        PokemonType | None,
+        Field(description="Second type for a dual-typed Pokémon. Omit for a single type."),
+    ] = None,
+) -> TypeMatchupCard:
+    """Generation-correct type chart for one or two types."""
+    return _type_matchup(type1, game, type2=type2, conn=_connection(ctx))
 
 
 def main() -> None:

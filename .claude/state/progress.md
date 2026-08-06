@@ -1,9 +1,13 @@
 # Project Progress
 
 ## Current Phase
-Phase: 1b
-Title: Tier 1 core tools — find_pokemon, get_learnset, can_learn, get_move
+Phase: 2
+Title: where_to_find, list_obtainable, get_item, type_matchup
 Status: READY TO DELEGATE
+
+**Git: work is now committed on branch `phase-1-tier1` (one commit per phase as each closes its
+review gate; fast-forwardable to main). Before 2026-08-06 nothing but PLAN.md and the .claude/
+scaffold was tracked — `git checkout -- src/` silently no-opped and code review had no diff to read.**
 
 **Gate policy (decided 2026-08-05):** the Cherry Studio check is NON-BLOCKING at Phase 0. Build ahead
 through Phases 1–3 while the user verifies on their own time. The gate becomes BLOCKING at Phase 4,
@@ -83,15 +87,72 @@ where the agent prompt and Skill need a working end-to-end loop.
   Tests: 90 passed, 8 skipped (up from 20/8). Suite skips cleanly with an actionable message when
   `data/pokedex.sqlite` is absent, so a fresh clone doesn't go red.
 
-## Current Phase Tasks (1b)
-- [ ] 1b.0 Three tiny ingest fixes carried from 1a's closing review (see below)
-- [ ] 1b.1 `models.py` — `source`-bearing base + paged-list base enforcing `total_count`/`next_offset`
-- [ ] 1b.2 `games.py` — `Literal` alias as source of truth, alias resolver, version_group↔version_id map,
-      DLC folding, base-form walk
-- [ ] 1b.3 `db.py` — query builders, 40-row cap, parameterized SQL only
-- [ ] 1b.4 `find_pokemon`, `get_learnset`, `can_learn`, `get_move`
-- [ ] 1b.5 test-engineer: light up the 5 skipping Tier-1 evals + `move_changelog` backwards-walk eval
-- [ ] 1b.6 **code-reviewer gate** (mandatory)
+- **Phase 1b — Tier 1 tools (2026-08-06). PASSED after FOUR review rounds.** `models.py`, `games.py`,
+  `db.py` query builders, `find_pokemon`, `get_learnset`, `can_learn`, `get_move`. **369 passed,
+  3 skipped** (the 3 being Phase 2/3 tools). PLAN.md §2 Phase 1 exit criterion met.
+
+  **Egg moves = the UNION of the pre-evolution chain, gated to the queried generation.** Not the base
+  form alone, not the queried species alone. Verified against Bulbapedia: Snorlax Gen IV "By breeding"
+  = 10 rows carrying both Snorlax-only Fissure and Munchlax-only Zen Headbutt; Marill Gen III = 13 =
+  marill 8 ∪ azurill 5, move-for-move. Control: Pikachu Gen III lists 8 breeding moves despite zero
+  egg rows anywhere, so Bulbapedia reports obtainability-on-this-species, which is the question asked.
+
+  What the four rounds found, each invisible to the previous one's tests:
+  1. TM labels on non-machine rows (27 Emerald / 38 HGSS) — from §0.4's *hallucination guard*;
+     `can_learn` and `get_learnset` contradicting each other; base-form walk crossing into Gen-4
+     baby forms (8 Emerald species returning `count: 0`).
+  2. The fix revealed the bug was worse — HGSS was ALSO dropping Snorlax's Fissure.
+  3. Same generation-gating defect surviving in `find_pokemon.evolves_from` (7 Emerald species), and
+     the tool description still telling the model the pre-union story.
+  4. Alternate-form disclosure wired into 2 of 3 tools, and its note narrowed to illegal verdicts —
+     false in HGSS.
+
+  **The recurring pattern: the bug is never where the acceptance criteria look.** Every round's
+  defect lived in the tool, game, or field the previous round's tests didn't cover.
+
+  `can_learn` and `get_learnset` now share ONE query builder — `can_learn` has no SQL of its own.
+  Verified structural, not coincidental: 6,430 verdicts across both games, 0 mismatches.
+  Alternate forms disclosed but not queryable (see the deferred-capability note below); the detector
+  is data-driven with 0 false positives/negatives dex-wide, and stays silent for Castform because its
+  three weather forms have a symmetric difference of exactly 0.
+
+  Suite is mutation-tested throughout — every claimed guard was verified by reintroducing the bug and
+  confirming red, then restoring and diffing.
+
+## Current Phase Tasks (2)
+- [ ] 2.1 `where_to_find` — **see the HGSS encounter ground truth below; both naive strategies are wrong**
+- [ ] 2.2 `list_obtainable` — badge-count scoping, response must say it's approximate (§3.8)
+- [ ] 2.3 `get_item` — must handle multi-row identifier lookup (`roseli-berry` = ids 723 AND 2279)
+- [ ] 2.4 `type_matchup` — gen-correct via `type_efficacy_past` (6 rows total: Gen 1 + Gen 5 only)
+- [ ] 2.5 Coverage honesty built in, not retrofitted — Emerald 1,647 encounter rows vs HGSS 6,205
+- [ ] 2.6 test-engineer: light up the `where_to_find` feebas eval (`source_not: silently-empty`)
+- [ ] 2.7 **code-reviewer gate** (mandatory)
+
+## ⚠️ THE RECURRING FAILURE: GUARDS THAT STRUCTURALLY CANNOT FAIL
+Five instances so far, all found late, all after a green result created false confidence. **Before
+trusting any sweep, ask what it is capable of failing on.**
+
+1. **Emerald cannot expose version-union bugs** — it is one version_id, HGSS is two.
+2. **Emerald cannot expose alternate-form gaps** — its only diverging form (`deoxys-speed`) is a pure
+   superset (71 extra rows, 0 missing). A 448-pair sweep and a 365-test suite both passed while
+   `can_learn` shipped a false assurance in HGSS.
+3. **Growlithe cannot expose a cross-version rarity sum** — it is HG-exclusive. Unown (12 slots per
+   chamber in BOTH versions) is the case that can actually fail.
+4. **A decoy-table test alone cannot prove a parser works** — without the complement (a row added
+   INSIDE §1.3 must be picked up), the registry meta-test passes by comparing two empty sets.
+5. **`False == 0` in Python** — the eval harness's `available_in_game: false` check could be satisfied
+   by any zero-valued field, in the one field whose whole point is three-valuedness. Fixed with an
+   identity comparison scoped to bools/None.
+
+Corollary that keeps proving out: **assert the complement.** A guard and its inverse, or the guard
+may be inert.
+
+## ⚠️ TEST FORM/ENCOUNTER BEHAVIOUR AGAINST HGSS, NOT EMERALD
+Learned the hard way in 1b. Emerald's only diverging form (`deoxys-speed`) is a **pure superset** —
+71 extra rows, 0 missing — so a 448-pair sweep, a full 365-test suite, and a review round all looked
+clean while `can_learn` shipped a false assurance in HGSS. HGSS is where alternate forms genuinely
+*lack* moves the default has (wormadam 11, deoxys-attack 7, shaymin-sky 4, giratina-origin 1).
+The same asymmetry applies to encounters: Emerald is one version_id, HGSS is two.
 
 ## ⚠️ GROUND TRUTH: HGSS encounters are NOT mirrored (established 2026-08-06)
 Independently derived by `test-engineer` and `code-reviewer`, agreeing exactly. **Phase 2's

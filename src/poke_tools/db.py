@@ -280,7 +280,14 @@ def compact_name(name: str) -> str:
     return normalize_name(name).replace("-", "")
 
 
-def _fuzzy(candidate: str, pool: Iterable[str]) -> list[str]:
+def close_names(candidate: str, pool: Iterable[str]) -> list[str]:
+    """Up to three near-matches for *candidate* from *pool*, or none at all.
+
+    Public because every name-resolving tool wants the same "did you mean"
+    behaviour and the same strictness. ``get_item`` resolves outside this module
+    — an item identifier is not unique upstream, so it cannot use the single-row
+    resolvers below — but it must still fail the same way.
+    """
     return difflib.get_close_matches(candidate, list(pool), n=3, cutoff=_FUZZY_CUTOFF)
 
 
@@ -327,7 +334,7 @@ def resolve_species(conn: sqlite3.Connection, name: str) -> SpeciesRef:
     )
     if row is None:
         pool = [r[0] for r in query_all(conn, "SELECT identifier FROM pokemon_species")]
-        suggestions = _fuzzy(normalized, pool)
+        suggestions = close_names(normalized, pool)
         hint = f" Did you mean: {', '.join(suggestions)}?" if suggestions else ""
         raise NameNotFoundError(f"no Pokémon named {name!r}.{hint}")
     return SpeciesRef(
@@ -363,7 +370,7 @@ def resolve_move(conn: sqlite3.Connection, name: str) -> int:
     move_id = resolve_move_id(conn, name)
     if move_id is None:
         pool = [r[0] for r in query_all(conn, "SELECT identifier FROM moves")]
-        suggestions = _fuzzy(normalize_name(name), pool)
+        suggestions = close_names(normalize_name(name), pool)
         hint = f" Did you mean: {', '.join(suggestions)}?" if suggestions else ""
         raise NameNotFoundError(f"no move named {name!r}.{hint}")
     return move_id

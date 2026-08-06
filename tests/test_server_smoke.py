@@ -107,15 +107,20 @@ async def test_initialize_reports_expected_identity(server_surface: dict[str, ob
     assert info.version == __version__
 
 
-#: Exactly what is registered at the end of Phase 1b: the Phase 0 diagnostic plus
-#: the four Tier 1 tools of PLAN.md §1.3. Spelled out rather than counted so that
-#: *which* tools appeared is legible in the failure message, not just how many.
+#: Exactly what is registered at the end of Phase 2: the Phase 0 diagnostic, the
+#: four Tier 1 learnset/dex tools of Phase 1b, and Phase 2's four. Spelled out
+#: rather than counted so that *which* tools appeared is legible in the failure
+#: message, not just how many.
 EXPECTED_TOOL_NAMES = [
     "can_learn",
     "find_pokemon",
+    "get_item",
     "get_learnset",
     "get_move",
+    "list_obtainable",
     "server_info",
+    "type_matchup",
+    "where_to_find",
 ]
 
 #: PLAN.md §0.4 fixes the tool budget at roughly ten: Qwen 3.8 degrades with a
@@ -126,12 +131,20 @@ EXPECTED_TOOL_NAMES = [
 #: Orchestrator decision on record: ``server_info`` counts against the budget and
 #: is rung zero of §3.2's consolidation ladder (``server_info`` →
 #: ``get_move`` into ``get_learnset`` → ``type_matchup`` into ``team_check`` →
-#: ``export_team`` into ``team_check``). Climbing it is a deliberate act, so this
-#: test asserts the count *exactly*: a twelfth tool arriving without the ladder
-#: being climbed should turn something red rather than silently cross a ceiling
-#: nobody is watching.
+#: ``export_team`` into ``team_check``).
+#:
+#: **Phase 2 leaves exactly one slot.** Nine registered against a ceiling of ten,
+#: with ``team_check``, ``export_team`` and ``wiki_lookup`` still to land. The
+#: guard below is therefore two assertions doing different jobs: an exact-count
+#: check so an unplanned tool is noticed at all, and a ``<= TOOL_BUDGET`` check
+#: that fires the moment the *ceiling itself* is crossed — the one that must not
+#: be satisfiable by simply bumping ``EXPECTED_TOOL_NAMES``.
 TOOL_BUDGET = 10
 PLANNED_TOOL_COUNT_AT_FULL_BUILD = 12
+
+#: Tools still to be registered (PLAN.md §1.3), against the one remaining slot.
+#: Pinned so the arithmetic that makes the budget urgent is asserted, not implied.
+UNBUILT_TOOL_NAMES = ["export_team", "team_check", "wiki_lookup"]
 
 
 def _tools(server_surface: dict[str, object]) -> list:
@@ -143,7 +156,7 @@ def _tool_named(server_surface: dict[str, object], name: str):
     return tool
 
 
-async def test_lists_exactly_the_phase_1b_tools(server_surface: dict[str, object]) -> None:
+async def test_lists_exactly_the_phase_2_tools(server_surface: dict[str, object]) -> None:
     """Registration is pinned to an exact set, not a floor.
 
     Phase 0 asserted ``== ["server_info"]`` for the same reason this asserts the
@@ -165,17 +178,27 @@ async def test_tool_count_stays_within_the_phase_budget(
     """
     tools = _tools(server_surface)
     assert len(tools) == len(EXPECTED_TOOL_NAMES), (
-        f"registered {len(tools)} tools, expected {len(EXPECTED_TOOL_NAMES)} for Phase 1b. "
+        f"registered {len(tools)} tools, expected {len(EXPECTED_TOOL_NAMES)} for Phase 2. "
         "If this is a deliberate addition, update EXPECTED_TOOL_NAMES and check it against "
         f"the §0.4 budget of ~{TOOL_BUDGET}."
     )
-    # Standing reminder that the full build is already over budget, so the ladder
-    # has to be climbed before phases 2-4 finish rather than discovered at the end.
-    assert PLANNED_TOOL_COUNT_AT_FULL_BUILD > TOOL_BUDGET
+    # The ceiling itself, asserted against the live surface rather than against
+    # the expectation list. Bumping EXPECTED_TOOL_NAMES satisfies the check above
+    # but cannot satisfy this one — crossing §0.4's budget stays loud.
     assert len(tools) <= TOOL_BUDGET, (
-        "the tool surface has reached PLAN.md §0.4's budget; consolidate per §3.2 "
-        "(fold get_move into get_learnset, then type_matchup and export_team into team_check) "
-        "before registering more"
+        f"the tool surface has reached PLAN.md §0.4's budget ({len(tools)} of {TOOL_BUDGET}); "
+        "consolidate per §3.2 (fold get_move into get_learnset, then type_matchup and "
+        "export_team into team_check) before registering more"
+    )
+    # Standing reminder that the full build is over budget, so the ladder has to be
+    # climbed before phases 3-4 finish rather than discovered at the end. Phase 2
+    # leaves one slot for three unbuilt tools: the arithmetic no longer works.
+    assert PLANNED_TOOL_COUNT_AT_FULL_BUILD > TOOL_BUDGET
+    remaining_slots = TOOL_BUDGET - len(tools)
+    assert remaining_slots < len(UNBUILT_TOOL_NAMES), (
+        f"{remaining_slots} slot(s) left for {len(UNBUILT_TOOL_NAMES)} unbuilt tools "
+        f"({', '.join(UNBUILT_TOOL_NAMES)}). If this assertion has gone green the surface "
+        "shrank, which means the §3.2 ladder was climbed — update this test to say so."
     )
 
 
@@ -242,8 +265,30 @@ async def test_literal_arguments_reach_the_wire_as_closed_enums(
     asserted on the wire schema, which is the only place the model can see it.
     """
     games = ["heartgold-soulsilver", "emerald"]
-    methods = ["level-up", "egg", "tutor", "machine"]
+    learn_methods = ["level-up", "egg", "tutor", "machine"]
+    method_groups = ["any", "walk", "surf", "fishing", "headbutt", "rock-smash"]
+    types = [
+        "normal",
+        "fighting",
+        "flying",
+        "poison",
+        "ground",
+        "rock",
+        "bug",
+        "ghost",
+        "steel",
+        "fire",
+        "water",
+        "grass",
+        "electric",
+        "psychic",
+        "ice",
+        "dragon",
+        "dark",
+        "fairy",
+    ]
     saw_game = 0
+    saw: set[str] = set()
 
     for tool in _tools(server_surface):
         properties = tool.input_schema.get("properties", {})
@@ -257,12 +302,43 @@ async def test_literal_arguments_reach_the_wire_as_closed_enums(
             array = next(
                 option for option in properties["methods"]["anyOf"] if option.get("type") == "array"
             )
-            assert array["items"].get("enum") == methods, (
+            assert array["items"].get("enum") == learn_methods, (
                 f"{tool.name}'s `methods` argument items are not a closed enum on the wire"
             )
+            saw.add("methods")
+        if "method" in properties:
+            # Phase 2's encounter-method *group* (locations.MethodGroup), which is
+            # a deliberate six-value narrowing of the 21 raw method identifiers in
+            # the table — §0.4 again: a small model should not pick from 21.
+            assert properties["method"].get("enum") == method_groups, (
+                f"{tool.name}'s `method` argument is not the six-value group enum on the wire"
+            )
+            saw.add("method")
+        if "type1" in properties:
+            assert properties["type1"].get("enum") == types, (
+                f"{tool.name}'s `type1` argument is not the eighteen-type enum on the wire"
+            )
+            saw.add("type1")
+        if "type2" in properties:
+            # Optional scalar, so `anyOf: [enum, null]` — the enum has to survive
+            # inside the union, which is where an optional arg usually loses it.
+            option = next(
+                candidate
+                for candidate in properties["type2"]["anyOf"]
+                if candidate.get("type") == "string"
+            )
+            assert option.get("enum") == types, (
+                f"{tool.name}'s `type2` argument loses its enum inside the optional union"
+            )
+            saw.add("type2")
 
     assert saw_game == len(EXPECTED_TOOL_NAMES) - 1, (
         f"every tool except server_info takes a `game` argument; only {saw_game} advertised one"
+    )
+    # Asserted rather than assumed: an argument that got renamed or dropped would
+    # otherwise make every check above vacuously pass by never matching.
+    assert saw == {"methods", "method", "type1", "type2"}, (
+        f"expected to check every enum-constrained argument; only saw {sorted(saw)}"
     )
 
 

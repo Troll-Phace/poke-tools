@@ -8,3 +8,4 @@ data/pokedex.sqlite
 data/pokedex.sqlite.build-tmp
 data/source-cache/
 .claude/settings.local.json
+.DS_Store

@@ -396,6 +396,36 @@ CREATE TABLE item_flag_map (
     PRIMARY KEY (item_id, item_flag_id)
 );
 
+-- Which generations an item actually exists in. `get_item` reads nothing else
+-- from this table -- the `game_index` itself is an internal ROM index no tool
+-- surfaces -- but its *presence* is the only structured signal in the whole CSV
+-- set that answers "is this item in this game at all".
+--
+-- Without it `get_item('life-orb', 'emerald')` returns a clean card stamped
+-- `game: emerald` for a Generation 4 item, which is an affirmative assertion of
+-- something false rather than a mere omission, and feeds straight into the
+-- Phase 4 team_check item-availability logic.
+--
+-- **A missing generation row and a missing item are different facts.** 49 of
+-- 2,222 items (Oak's Parcel, Metal Alloy, every Mega Stone that never shipped a
+-- game index, ...) have *no* rows here at all. Treating "no gen-3 row" and "no
+-- rows whatsoever" alike would turn those 49 into false does-not-exist claims --
+-- the same PLAN.md §3.9 error pointing the other way -- so `get_item` reports
+-- them as unknown, not absent.
+--
+-- No primary key, deliberately, matching `location_area_prose` above: upstream
+-- violates the (item_id, generation_id) key this table implies. Five pairs
+-- repeat -- elixir and kings-rock each carry two Gen 2 indexes (21/65 and
+-- 82/221), deep-sea-tooth two Gen 5 indexes (226/227), and aloraichium-z--held
+-- and holo-caster--red are exact duplicate rows. Declaring the key would only
+-- mean the build refuses to run; nothing here reads `game_index`, so the
+-- duplicates are harmless to the existence test.
+CREATE TABLE item_game_indices (
+    item_id         INTEGER NOT NULL REFERENCES items (id),
+    generation_id   INTEGER NOT NULL REFERENCES generations (id),
+    game_index      INTEGER NOT NULL
+);
+
 -- PLAN.md §0.6.4: `machine_number` is stored raw on purpose. The TM/HM label is
 -- derived at query time (`n <= 100 -> TM{n:02d}`, else `HM{n-100:02d}`); baking
 -- the string in would be a lossy transform of the only column that carries the
@@ -560,6 +590,30 @@ CREATE TABLE pokemon_egg_groups (
     species_id      INTEGER NOT NULL REFERENCES pokemon_species (id),
     egg_group_id    INTEGER NOT NULL REFERENCES egg_groups (id),
     PRIMARY KEY (species_id, egg_group_id)
+);
+
+-- Held-by-wild rarity: the one clause of PLAN.md §1.3's `get_item` line that had
+-- no table behind it. `rarity` is a percentage (1..100) of wild members of that
+-- species carrying the item -- Snorlax holds Leftovers at 100 in both launch
+-- games, which is the canonical answer to "where do I get Leftovers in Gen 2/3/4"
+-- that PokéAPI otherwise cannot give.
+--
+-- **Keys on `version_id`, not `version_group_id`** -- the same ID-space split as
+-- `encounters` (PLAN.md §0.6.3), so HGSS must union 15 and 16 and Emerald is 9
+-- alone. Verified: no HGSS holding is version-asymmetric today, but the union is
+-- written generically rather than assuming that.
+--
+-- `pokemon_id` is form-level, so a species with battle-only forms repeats: wild
+-- Castform holds Mystic Water as four rows (castform plus rainy/snowy/sunny) at
+-- an identical rarity. `get_item` collapses those to the species, keyed on
+-- rarity so a genuine per-form disagreement would split into two rows rather
+-- than silently pick one.
+CREATE TABLE pokemon_items (
+    pokemon_id      INTEGER NOT NULL REFERENCES pokemon (id),
+    version_id      INTEGER NOT NULL REFERENCES versions (id),
+    item_id         INTEGER NOT NULL REFERENCES items (id),
+    rarity          INTEGER NOT NULL,
+    PRIMARY KEY (pokemon_id, version_id, item_id)
 );
 
 
@@ -893,6 +947,13 @@ CREATE INDEX idx_location_areas_location
 
 CREATE INDEX idx_machines_vg_move
     ON machines (version_group_id, move_id);
+
+-- get_item's two per-item lookups: "does this item exist in generation G" and
+-- "who holds it in these versions".
+CREATE INDEX idx_item_game_indices_item
+    ON item_game_indices (item_id, generation_id);
+CREATE INDEX idx_pokemon_items_item
+    ON pokemon_items (item_id, version_id);
 
 CREATE INDEX idx_move_changelog_move
     ON move_changelog (move_id, changed_in_version_group_id);
