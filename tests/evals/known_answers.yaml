@@ -870,3 +870,183 @@ cases:
       be a confident wrong answer about a matchup the cartridge cannot produce, so
       it never enters the chart at all. The generation field is pinned because a
       gen-correct chart that does not say which generation cannot be checked.
+
+  # --- team_check: composition, honesty, and reporting without ruling ------
+
+  - name: team_check_verdict_matches_can_learn_on_draco_meteor
+    tool: team_check
+    args:
+      team:
+        - { pokemon: salamence, moves: [draco-meteor] }
+      game: emerald
+    expect:
+      contains: ["Salamence cannot learn this move in emerald"]
+      fields:
+        all_moves_legal: false
+    why: >-
+      The cross-generation leakage case, reached through the *composing* tool. PLAN.md
+      §5 calls the direct can_learn version the highest-value eval in the suite; this
+      one guards the second way to get it wrong, which is a team report that
+      re-derives legality instead of carrying can_learn's own MoveLegality objects.
+      The reason string is pinned verbatim because that is the half a reader acts on:
+      a report agreeing on `legal` while disagreeing on *why* is the same defect
+      wearing a disguise. Phase 1b spent four review rounds on can_learn and
+      get_learnset drifting apart; this is the third tool that could join them.
+
+  - name: team_check_does_not_grade_a_finding_as_incomplete
+    tool: team_check
+    args:
+      team:
+        - { pokemon: salamence, moves: [draco-meteor] }
+      game: emerald
+    expect:
+      fields:
+        confidence: high
+        coverage_note: null
+    why: >-
+      `partial` means the data could not fully answer the question — not that the
+      answer contains bad news. Every move being illegal is a *complete* answer, as is
+      a species that postdates the game. Grading either `partial` makes the field mean
+      "we found problems", and then a genuinely narrowed report — an alternate form
+      this server cannot query, an item upstream records nothing for — becomes
+      indistinguishable from a healthy team with a flaw. This shipped wrong once: the
+      no-moves branch keyed on "no legal damaging move", so a caught illegal move
+      degraded the grade *and* attached a note claiming legality was never assessed.
+
+  - name: team_check_reports_the_shared_evolution_line_without_ruling_on_it
+    tool: team_check
+    args:
+      team:
+        - { pokemon: gyarados, moves: [waterfall] }
+        - { pokemon: magikarp, moves: [splash] }
+      game: heartgold-soulsilver
+    expect:
+      contains:
+        - "belong to the same evolution line"
+        - "Dupes-clause rulesets differ"
+        - "no ruleset is applied here"
+      not_contains:
+        - "violates"
+        - "not allowed"
+    why: >-
+      PLAN.md §1.3 is emphatic that team_check reports facts and lets the human apply
+      their ruleset, because house rules vary too much for a tool to pick one. The
+      three positive fragments are the observation stating the fact *and* declining to
+      adjudicate it; the two negatives are what a well-meaning edit adds when it
+      decides a dupes clause is universal. A bare "they share an evolution line" reads
+      as an accusation to someone running one and as noise to someone who is not.
+
+  - name: team_check_carries_the_unknown_item_verdict_up_verbatim
+    tool: team_check
+    args:
+      team:
+        - { pokemon: typhlosion, moves: [flamethrower], item: oaks-parcel }
+      game: heartgold-soulsilver
+    expect:
+      contains:
+        - "unknown, not no"
+        - "get_item:"
+      fields:
+        confidence: partial
+    why: >-
+      *** Honesty propagation, on the field where collapsing it invents a fact. ***
+      `available_in_game` is three-valued and `null` means upstream records no
+      generation index at all — unknown, never denied. get_item earned that
+      distinction across 49 items; a team report that flattened it into `false` would
+      manufacture "this item does not exist here" out of honest parts, which is
+      PLAN.md §3.9's failure exactly. The `get_item:` prefix is pinned too: a caveat
+      that arrives without saying which tool said it cannot be re-run or verified.
+
+  - name: team_check_discloses_the_form_it_actually_answered_for
+    tool: team_check
+    args:
+      team:
+        - { pokemon: wormadam, moves: [bug-buzz] }
+      game: heartgold-soulsilver
+    expect:
+      contains:
+        - "wormadam-plant"
+        - "wormadam-trash"
+      fields:
+        confidence: partial
+    why: >-
+      Alternate-form support is deferred for v1, so a Wormadam question is answered
+      with Wormadam-Plant's rows. That is only acceptable while it is *disclosed*, and
+      the disclosure has to survive two tool boundaries to reach here. The grade is
+      pinned alongside the prose because the two are meant to be derived from the same
+      `db.diverging_forms` call — a confidence sniffed out of note text would drift
+      silently the moment either source tool reworded its sentence.
+
+  # --- export_team: paste-ready, and gen-correct by derivation -------------
+
+  - name: export_team_hgss_renders_a_pasteable_party
+    tool: export_team
+    args:
+      team:
+        - { pokemon: typhlosion, moves: [flamethrower, earthquake], item: charcoal, ability: blaze, nature: modest, level: 50 }
+        - { pokemon: gyarados, moves: [waterfall, ice-fang], item: lum-berry, ability: intimidate }
+      game: heartgold-soulsilver
+    expect:
+      contains:
+        - "Typhlosion @ Charcoal"
+        - "Ability: Blaze"
+        - "Modest Nature"
+        - "- Ice Fang"
+      max_bytes: 4000
+    why: >-
+      PLAN.md §2's phase 4 exit criterion is "paste-ready for damage calcs", which is a
+      claim about a *format*, not about looking right. Names are resolved through the
+      same resolvers every other tool uses, so `ice-fang` comes out as Showdown spells
+      it rather than as it was typed — an export that echoes its input produces a paste
+      that silently drops a Pokémon on import.
+
+  - name: export_team_omits_tera_and_says_why
+    tool: export_team
+    args:
+      team:
+        - { pokemon: swampert, moves: [surf], ability: torrent }
+      game: emerald
+    expect:
+      contains:
+        - "Terastallization is generation 9"
+      not_contains:
+        - "Tera Type:"
+    why: >-
+      The generation quirks §1.3 names are encoded as floors, not as game names — both
+      launch games are Generation 3 or 4, so *every* export in scope omits Tera and
+      carries an ability line, which makes a hardcoded "no Tera in HGSS" produce
+      byte-identical output to the rule. The absence is stated rather than left silent:
+      a reader comparing this against a modern paste notices the missing line, and "the
+      mechanic postdates this game" is a better answer than nothing.
+
+  - name: export_team_does_not_emit_the_nidoran_glyph_that_breaks_import
+    tool: export_team
+    args:
+      team:
+        - { pokemon: nidoran-f, moves: [tackle] }
+        - { pokemon: nidoran-m, moves: [tackle] }
+      game: emerald
+    expect:
+      fields:
+        text: "Nidoran-F\n- Tackle\n\nNidoran-M\n- Tackle\n"
+    why: >-
+      Showdown's toID() lowercases and strips everything outside [a-z0-9], so
+      `Nidoran♀` and `Nidoran♂` both collapse to `nidoran` — which is not a species id
+      at all; the ids are `nidoranf` and `nidoranm`. Two different Pokémon rendered as
+      one unimportable name is a §2 phase 4 exit-criterion breach, and it is invisible
+      to a human reading the paste, which looks perfectly correct.
+
+      Scoped to `text` on purpose, and this was a real call. The first version asserted
+      the glyph was absent from the *whole serialised response*, which fails a perfectly
+      correct paste whose note happens to quote the pokédex name it replaced — and a
+      note explaining why a name was rewritten is exactly the honesty this project
+      protects everywhere else. The importable-paste property is a property of `text`;
+      the response object is not the paste. A guard that fails on correct behaviour
+      erodes the suite as surely as one that cannot fail at all.
+
+      The broader "no note anywhere quotes the glyph" invariant is deliberately *not*
+      asserted, here or as a separate case: it is not an exit criterion, and pinning it
+      would forbid a future note that legitimately names a display form. The underlying
+      property — toID of each rendering equals the species id, and the two Nidoran do
+      not collapse together — is asserted in tests/test_export_team.py, which can
+      compute toID; the YAML layer pins the one rendering that satisfies it.

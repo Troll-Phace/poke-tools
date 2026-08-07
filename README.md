@@ -10,15 +10,21 @@ See `PLAN.md` for the full architecture, data-source findings, tool surface, and
 
 ## Status
 
-Phase 0 — scaffold. One diagnostic tool (`server_info`) is registered; the data layer,
-the eleven real tools, and the ingest pipeline land in later phases.
+Phase 4 — all twelve tools are registered: the eleven of PLAN.md §1.3 plus the
+`server_info` diagnostic. The agent system prompt is in `docs/AGENT_PROMPT.md`, the
+team-building methodology in `SKILL.md`, and the Cherry Studio wiring in
+`docs/CHERRY_STUDIO_SETUP.md`.
+
+Twelve is above PLAN.md §0.4's ~10 budget, deliberately — see the tool-budget decision
+in `.claude/state/progress.md`. §3.2's consolidation ladder stays available and is not
+climbed pre-emptively.
 
 ## Usage
 
 ```sh
 uv sync
+uv run poke-tools-build   # build data/pokedex.sqlite first — the tools need it
 uv run poke-tools-mcp     # MCP server over stdio
-uv run poke-tools-build   # pokedex.sqlite ingest (not implemented until Phase 1)
 ```
 
 ### `POKE_TOOLS_DB`

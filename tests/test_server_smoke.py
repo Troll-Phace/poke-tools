@@ -107,18 +107,21 @@ async def test_initialize_reports_expected_identity(server_surface: dict[str, ob
     assert info.version == __version__
 
 
-#: Exactly what is registered at the end of Phase 3: the Phase 0 diagnostic, the
-#: four Tier 1 learnset/dex tools of Phase 1b, Phase 2's four, and Phase 3's
-#: ``wiki_lookup``. Spelled out rather than counted so that *which* tools
-#: appeared is legible in the failure message, not just how many.
+#: Exactly what is registered at the end of Phase 4 — the full build: the Phase 0
+#: diagnostic, the four Tier 1 learnset/dex tools of Phase 1b, Phase 2's four,
+#: Phase 3's ``wiki_lookup``, and Phase 4's ``team_check`` and ``export_team``.
+#: Spelled out rather than counted so that *which* tools appeared is legible in
+#: the failure message, not just how many.
 EXPECTED_TOOL_NAMES = [
     "can_learn",
+    "export_team",
     "find_pokemon",
     "get_item",
     "get_learnset",
     "get_move",
     "list_obtainable",
     "server_info",
+    "team_check",
     "type_matchup",
     "where_to_find",
     "wiki_lookup",
@@ -126,26 +129,56 @@ EXPECTED_TOOL_NAMES = [
 
 #: PLAN.md §0.4 fixes the tool budget at roughly ten: Qwen 3.8 degrades with a
 #: wide surface, and that is stated as a hard constraint rather than a style
-#: preference. §1.3 enumerates eleven tools and ``server_info`` makes twelve, so
-#: the surface is already over budget *by design* at full build.
+#: preference. §1.3 enumerates eleven tools and ``server_info`` makes twelve.
 #:
-#: Orchestrator decision on record: ``server_info`` counts against the budget and
-#: is rung zero of §3.2's consolidation ladder (``server_info`` →
-#: ``get_move`` into ``get_learnset`` → ``type_matchup`` into ``team_check`` →
-#: ``export_team`` into ``team_check``).
+#: **The ceiling was raised to twelve deliberately on 2026-08-06, not widened to
+#: fit.** The decision, and the evidence §0.4 was written without, is recorded in
+#: ``.claude/state/progress.md`` under "TOOL BUDGET":
 #:
-#: **Phase 3 leaves zero slots.** Ten registered against a ceiling of ten, with
-#: ``team_check`` and ``export_team`` still to land. The guard below is therefore
-#: two assertions doing different jobs: an exact-count check so an unplanned tool
-#: is noticed at all, and a ``<= TOOL_BUDGET`` check that fires the moment the
-#: *ceiling itself* is crossed — the one that must not be satisfiable by simply
-#: bumping ``EXPECTED_TOOL_NAMES``.
-TOOL_BUDGET = 10
-PLANNED_TOOL_COUNT_AT_FULL_BUILD = 12
+#: * Live Cherry Studio test, Qwen 3.8, three unprompted queries against a
+#:   nine-tool surface: correct tool selection 3/3, including one query answered
+#:   by ``can_learn`` and ``get_move`` called **in parallel**, and one paginated
+#:   across all three pages of ``list_obtainable``.
+#: * The single observed failure was the ``methods`` enum being invisible two
+#:   levels down an ``anyOf`` — a **schema-shape** problem, not a selection
+#:   problem, and since fixed: every enum argument now names its values in its
+#:   description, generated from the ``Literal``
+#:   (:func:`test_every_enum_argument_names_its_values_in_its_description`).
+#: * §3.2's first real rung, folding ``get_move`` into ``get_learnset`` behind a
+#:   ``verbose`` flag, makes that tool's contract muddier — and a muddy tool is
+#:   harder for a small model than one more clean tool. Climbing the ladder
+#:   pre-emptively could plausibly make selection *worse*.
+#:
+#: So the guard below is still two assertions doing two jobs. The exact-count
+#: check notices an unplanned tool at all; the ``<= TOOL_BUDGET`` check fires the
+#: moment the *ceiling itself* is crossed, and must not be satisfiable by bumping
+#: ``EXPECTED_TOOL_NAMES``. Raising ``TOOL_BUDGET`` again is the same kind of act
+#: as raising it to twelve was: a decision with evidence attached, taken by a
+#: human, not a side effect of registering one more convenient tool.
+TOOL_BUDGET = 12
 
-#: Tools still to be registered (PLAN.md §1.3), against zero remaining slots.
-#: Pinned so the arithmetic that makes the budget urgent is asserted, not implied.
-UNBUILT_TOOL_NAMES = ["export_team", "team_check"]
+#: §0.4's original figure, kept so the departure above stays visible rather than
+#: being absorbed into the new number. The full build is over ``PLAN_SOFT_BUDGET``
+#: by two and that is the *point* — it is a documented, measured departure.
+PLAN_SOFT_BUDGET = 10
+
+#: Phase 4 is the full build: nothing from PLAN.md §1.3 is outstanding. Kept as an
+#: empty list rather than deleted, because the arithmetic below is what turns the
+#: budget from a comment into a decision point, and it needs a term for "what is
+#: still to land".
+UNBUILT_TOOL_NAMES: list[str] = []
+
+#: §3.2's consolidation ladder, in the order the orchestrator committed to
+#: climbing it *if* selection degrades — measured, not assumed. Rung zero is
+#: ``server_info``: a Phase 0 diagnostic with no team-building value, and so the
+#: cheapest cut, though it is also what confirmed the user's ``POKE_TOOLS_DB``
+#: wiring in production.
+CONSOLIDATION_LADDER = [
+    "drop server_info (Phase 0 diagnostic, zero team-building value)",
+    "fold get_move into get_learnset as a `verbose` flag",
+    "fold type_matchup into team_check",
+    "fold export_team into team_check as a `format` argument",
+]
 
 #: The tools that take a ``game`` argument, named rather than counted.
 #:
@@ -156,11 +189,13 @@ UNBUILT_TOOL_NAMES = ["export_team", "team_check"]
 #: list length fails in a way that names no defect.
 GAME_ARG_TOOL_NAMES = {
     "can_learn",
+    "export_team",
     "find_pokemon",
     "get_item",
     "get_learnset",
     "get_move",
     "list_obtainable",
+    "team_check",
     "type_matchup",
     "where_to_find",
 }
@@ -175,7 +210,7 @@ def _tool_named(server_surface: dict[str, object], name: str):
     return tool
 
 
-async def test_lists_exactly_the_phase_3_tools(server_surface: dict[str, object]) -> None:
+async def test_lists_exactly_the_phase_4_tools(server_surface: dict[str, object]) -> None:
     """Registration is pinned to an exact set, not a floor.
 
     Phase 0 asserted ``== ["server_info"]`` for the same reason this asserts the
@@ -191,41 +226,60 @@ async def test_tool_count_stays_within_the_phase_budget(
     """The §0.4 tool budget is enforced, not just documented.
 
     Asserted as equality against the current phase's expected count. The point is
-    that crossing PLAN.md §0.4's ceiling has to be a decision somebody makes, with
-    §3.2's consolidation ladder considered — not a side effect of registering one
-    more convenient tool.
+    that crossing the ceiling has to be a decision somebody makes, with §3.2's
+    consolidation ladder considered — not a side effect of registering one more
+    convenient tool.
+
+    **The ceiling is now twelve rather than §0.4's ten, and that is the decision,
+    not a loosening.** See ``TOOL_BUDGET`` above for the evidence: 3/3 correct
+    selection from a nine-tool surface in live Cherry Studio testing, with the one
+    observed failure being schema shape rather than selection, and since fixed.
+    The ladder stays available and evidence-driven; the next move is to *measure*
+    (a full HGSS team of six through Qwen 3.8) and only then fold.
     """
     tools = _tools(server_surface)
     assert len(tools) == len(EXPECTED_TOOL_NAMES), (
-        f"registered {len(tools)} tools, expected {len(EXPECTED_TOOL_NAMES)} for Phase 3. "
-        "If this is a deliberate addition, update EXPECTED_TOOL_NAMES and check it against "
-        f"the §0.4 budget of ~{TOOL_BUDGET}."
+        f"registered {len(tools)} tools, expected {len(EXPECTED_TOOL_NAMES)} for Phase 4 "
+        "(the full build). If this is a deliberate addition, update EXPECTED_TOOL_NAMES and "
+        f"check it against the budget of {TOOL_BUDGET}."
     )
     # The ceiling itself, asserted against the live surface rather than against
     # the expectation list. Bumping EXPECTED_TOOL_NAMES satisfies the check above
-    # but cannot satisfy this one — crossing §0.4's budget stays loud.
+    # but cannot satisfy this one — crossing the budget stays loud.
     assert len(tools) <= TOOL_BUDGET, (
-        f"the tool surface has reached PLAN.md §0.4's budget ({len(tools)} of {TOOL_BUDGET}); "
-        "consolidate per §3.2 (fold get_move into get_learnset, then type_matchup and "
-        "export_team into team_check) before registering more"
+        f"the tool surface has crossed its ceiling ({len(tools)} of {TOOL_BUDGET}). "
+        "That ceiling was raised from PLAN.md §0.4's ~10 to 12 on 2026-08-06 as a recorded "
+        "decision, on evidence §0.4 was written without: Qwen 3.8 selected correctly 3/3 "
+        "from a nine-tool surface in live Cherry Studio testing — including one query "
+        "answered by two tools called in parallel — and the single failure was an enum "
+        "invisible two levels down an `anyOf`, a schema-shape problem, since fixed. "
+        "Twelve is the whole of PLAN.md §1.3 plus the server_info diagnostic; there is no "
+        "thirteenth tool in the plan. If selection has degraded, the response is to climb "
+        "§3.2's ladder, in order: "
+        + "; ".join(f"({i}) {rung}" for i, rung in enumerate(CONSOLIDATION_LADDER))
+        + ". Measure first — do not fold pre-emptively, and do not raise this number to "
+        "make room without the same kind of evidence."
     )
-    # Standing reminder that the full build is over budget, so the ladder has to be
-    # climbed rather than discovered at the end.
-    assert PLANNED_TOOL_COUNT_AT_FULL_BUILD > TOOL_BUDGET
-    remaining_slots = TOOL_BUDGET - len(tools)
-    assert remaining_slots < len(UNBUILT_TOOL_NAMES), (
-        f"*** PLAN.md §3.2's consolidation ladder must be climbed in Phase 4. *** "
-        f"The surface is at {len(tools)} of {TOOL_BUDGET} with {remaining_slots} slot(s) left "
-        f"and {len(UNBUILT_TOOL_NAMES)} tools still unbuilt ({', '.join(UNBUILT_TOOL_NAMES)}). "
-        "Registering either one crosses §0.4's ceiling, which the check above will refuse. "
-        "The documented first rung is `server_info`: the orchestrator's decision on record is "
-        "that it counts against the budget and is the cheapest cut, because it is a Phase 0 "
-        "diagnostic rather than a data tool — dropping it frees a slot at no cost to the "
-        "team-building surface. The rungs after it are get_move into get_learnset (as a "
-        "`verbose` flag), then type_matchup into team_check, then export_team into team_check "
-        "(as a `format` argument), which lands the full build at eight. "
-        "If this assertion has gone green the surface shrank, which means the ladder was "
-        "climbed — update this test to say which rung."
+    # The departure from §0.4 is asserted rather than left in prose, so a later
+    # edit quietly restoring TOOL_BUDGET to 10 fails here naming the decision.
+    assert TOOL_BUDGET > PLAN_SOFT_BUDGET, (
+        f"TOOL_BUDGET is back at PLAN.md §0.4's ~{PLAN_SOFT_BUDGET}, but the full build is "
+        f"{len(EXPECTED_TOOL_NAMES)} tools by design. Either the ladder was climbed (say "
+        "which rung, and shrink EXPECTED_TOOL_NAMES) or the recorded 2026-08-06 decision "
+        "was reverted without replacing its evidence."
+    )
+    assert len(EXPECTED_TOOL_NAMES) == TOOL_BUDGET, (
+        "the full build is expected to sit exactly at the ceiling — PLAN.md §1.3's eleven "
+        "tools plus server_info. A gap in either direction means the plan and the budget "
+        "have drifted apart."
+    )
+    # Phase 4 is the full build. Nothing outstanding, so nothing to reserve slots
+    # for — asserted rather than assumed, because a non-empty list here would mean
+    # the ladder-vs-register decision is live again and this test should say so.
+    assert not UNBUILT_TOOL_NAMES, (
+        f"{UNBUILT_TOOL_NAMES} are still unbuilt against a full ceiling of {TOOL_BUDGET}. "
+        "Registering any of them crosses it, so climb §3.2's ladder first: "
+        + "; ".join(f"({i}) {rung}" for i, rung in enumerate(CONSOLIDATION_LADDER))
     )
 
 
@@ -275,7 +329,7 @@ async def test_every_tool_carries_read_only_annotations(
     ``open_world_hint`` is **not** uniform, and this is the forcing point the
     earlier version of this test anticipated. ``wiki_lookup`` reaches a live
     external wiki whose content this project does not control, so it is ``True``;
-    the other nine answer from a fixed local database and are ``False``. Asserted
+    the other eleven answer from a fixed local database and are ``False``. Asserted
     as a partition rather than as a blanket, so a *future* tool that quietly
     opens a network call — the failure that matters, because it is invisible in
     the response — fails here instead of inheriting a copy-pasted ``False``.
@@ -504,7 +558,7 @@ async def test_every_enum_argument_names_its_values_in_its_description(
 async def test_the_game_argument_names_its_values_on_every_tool_that_takes_one(
     server_surface: dict[str, object],
 ) -> None:
-    """``game`` specifically, asserted across all nine tools that take it.
+    """``game`` specifically, asserted across all ten tools that take it.
 
     Separated from the sweep above because ``game`` is the argument with the most
     ways to be guessed wrong — ``'hgss'``, ``'HeartGold'``, ``'heartgold_soulsilver'``

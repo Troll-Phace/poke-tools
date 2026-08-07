@@ -1,9 +1,21 @@
 # Project Progress
 
 ## Current Phase
-Phase: 2
-Title: where_to_find, list_obtainable, get_item, type_matchup
-Status: READY TO DELEGATE
+Phase: 4
+Title: team_check, export_team, agent prompt, team-building Skill
+Status: READY TO DELEGATE — **this is the phase where the Cherry Studio gate BLOCKS**
+
+Committed through `d541ff0`. **887 tests, 0 skipped.** 10 of 11 tools built; 12 at full build.
+
+**Phase 4's exit criterion does double duty:** a full HGSS team of 6 through Qwen 3.8 is both the
+feature test AND the measurement that validates the 12-tool decision above. The user's three
+single-query tests passed (3/3 correct selection from 9 tools); a six-Pokémon team is many more calls,
+more context, more chances to drift. If selection degrades, climb §3.2's ladder — but measure first.
+
+**Verification debt carried into this gate:** the Phase 3 cleanup commit (`d541ff0`) is test-only plus
+three docstrings, closing `code-reviewer`'s own two WARNINGs with mutation evidence. Rather than open a
+round for it, its verification is folded into Phase 4's review. Flag it in that delegation so it is a
+decision and not a lapse.
 
 **Git: work is now committed on branch `phase-1-tier1` (one commit per phase as each closes its
 review gate; fast-forwardable to main). Before 2026-08-06 nothing but PLAN.md and the .claude/
@@ -201,7 +213,9 @@ passes against either shape, so nothing goes red.
   from tests: they use fixtures, which have no cache.
 - When a wiki row format looks wrong in manual testing, **clear `wiki_cache` before concluding
   anything**. `content` rows are regenerable; section indexes are keyed on revision id and safe.
-- Currently at `PAYLOAD_VERSION "3"` after the prevo + Gen III fixes.
+- Currently at **`PAYLOAD_VERSION "4"`**, set in `6a5d0e1` (the comment-unaware slicer fix). The digest
+  guard pins it against a hash of the code that determines row shape, so a change without a bump now
+  fails loudly instead of relying on anyone remembering.
 
 Open gap: nothing pins "a payload written by a different build under the same version" — the case that
 actually bit. Same-session round-trips are covered; cross-build poisoning is not.

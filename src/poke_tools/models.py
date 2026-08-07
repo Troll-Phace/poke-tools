@@ -673,6 +673,275 @@ class TypeMatchupCard(SourcedResult):
 
 
 # ---------------------------------------------------------------------------
+# team_check / export_team
+# ---------------------------------------------------------------------------
+
+
+# `TeamMember` is the **only input model in the project**, which makes its
+# docstring different in kind from every other one here: Pydantic copies it into
+# the tool's `inputSchema.$defs`, so it is shipped to the model on every tool
+# listing rather than read by a human. It is therefore kept to one line, and the
+# reasoning lives out here where it costs no context.
+#
+# PLAN.md §0.4 fixes arguments at flat and enum-constrained, and this is the one
+# place that cannot be honoured literally: a team is a list of Pokémon, each
+# carrying its own moves and item, and no flattening preserves the alignment.
+# Parallel lists (`pokemon[]`, `moves[]`, `items[]`) would flatten it, but a
+# small model producing a ragged set gets a *silently misaligned* team rather
+# than an error — Typhlosion checked against Feraligatr's moveset. So the nesting
+# is exactly one level deep, every field is a scalar or a list of scalars, and
+# everything except `pokemon` is optional, making the minimum viable call
+# `[{"pokemon": "typhlosion"}, ...]`.
+#
+# `extra="forbid"` is deliberate despite the model having to survive a small
+# model's spelling: a rejected key names itself in the error, where a silently
+# dropped one turns "I gave it an item" into a report that never mentions the
+# item.
+class TeamMember(BaseModel):
+    """One Pokémon on a team: species plus optional moves, item, ability, nature, level."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    pokemon: str = Field(description="Species name, e.g. 'typhlosion' or 'Mr. Mime'.")
+    moves: list[str] = Field(
+        default_factory=list,
+        max_length=4,
+        description="Up to four move names. Omit or leave empty to skip the legality check.",
+    )
+    item: str | None = Field(default=None, description="Held item, e.g. 'leftovers'.")
+    ability: str | None = Field(default=None, description="Ability, e.g. 'blaze'.")
+    nature: str | None = Field(default=None, description="Nature, e.g. 'adamant'.")
+    level: int | None = Field(default=None, ge=1, le=100, description="Level, if it matters.")
+
+
+class ItemCheck(BaseModel):
+    """A held item's availability verdict, carried up from ``get_item``.
+
+    ``available_in_game`` keeps ``get_item``'s three-valuedness intact — see
+    :attr:`ItemCard.available_in_game`. Collapsing the ``None`` case into ``False``
+    here would manufacture "this item does not exist in this game" for the 49
+    items upstream has no generation index for, which is the same PLAN.md §3.9
+    failure ``get_item`` went to some trouble to avoid.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    item: str = Field(description="Canonical item identifier.")
+    name: str
+    available_in_game: bool | None = Field(
+        description=(
+            "True, false, or **null when upstream records no generation for the item at "
+            "all** — null means 'not recorded', never 'no'. Verbatim from get_item."
+        )
+    )
+
+
+class TeamMemberCheck(BaseModel):
+    """One team slot's findings.
+
+    :attr:`moves` holds ``get_learnset``/``can_learn``'s own
+    :class:`MoveLegality` verdicts, unmodified. That is not convenience: PLAN.md's
+    hallucination guard is only a guard if a team report and a direct
+    ``can_learn`` call cannot disagree, and re-deriving a verdict here — even
+    from the same rows — is how they would drift.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    pokemon: str = Field(description="Canonical species identifier.")
+    name: str
+    available_in_game: bool = Field(
+        description="False when the species postdates this game and cannot be obtained at all."
+    )
+    types: list[str] = Field(description="Typing as of this game's generation.")
+    level: int | None = None
+    ability: str | None = None
+    ability_legal: bool | None = Field(
+        default=None,
+        description=(
+            "Whether the given ability is one this Pokémon can have in this game's "
+            "generation. Null when no ability was given."
+        ),
+    )
+    moves: list[MoveLegality] = Field(
+        default_factory=list, description="One verdict per requested move, from can_learn."
+    )
+    all_moves_legal: bool | None = Field(
+        default=None, description="Null when no moves were given for this slot."
+    )
+    egg_moves_from: str | None = None
+    item: ItemCheck | None = None
+    notes: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Caveats carried up **verbatim** from the tools this check composes, each "
+            "prefixed with the tool it came from. Alternate-form disclosures, "
+            "species-availability warnings and item-availability sentences all arrive "
+            "here unedited: a team report that smooths them into a clean summary is a "
+            "confident wrong answer assembled from honest parts."
+        ),
+    )
+
+
+#: What an observation *is*, so a reader can triage without parsing prose. Every
+#: value names a fact; none names a verdict. There is deliberately no
+#: ``species-clause`` or ``level-cap`` kind — see :class:`TeamReport`.
+TeamObservationKind = Literal[
+    "unavailable-species",
+    "illegal-move",
+    "illegal-ability",
+    "hm-move",
+    "tutor-move",
+    "item-unavailable",
+    "item-unknown",
+    "alternate-forms",
+    "duplicate-species",
+    "duplicate-line",
+    "type-overlap",
+    "coverage-gap",
+    "shared-weakness",
+    "data-coverage",
+]
+
+
+class TeamObservation(BaseModel):
+    """One fact about the team, stated without adjudicating it."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: TeamObservationKind
+    subject: str | None = Field(
+        default=None, description="Who or what it is about: a species, a type, an item."
+    )
+    detail: str = Field(description="The fact, in words. Never a ruling.")
+
+
+class TypePressure(BaseModel):
+    """A type two or more of the team are weak to, and who resists it.
+
+    Reported only when at least two members are weak, because one weakness on a
+    six-Pokémon team is not pressure, it is a type chart.
+
+    **Computed from typing plus whichever abilities could be resolved**, which is
+    not the same as every ability the team will actually have — see
+    :attr:`resist_members`. An ability that grants a type immunity (Levitate,
+    Flash Fire, Volt Absorb, Water Absorb, Motor Drive, Dry Skin) is honoured when
+    the caller supplied a legal ability for that member, or when the species has
+    only one ability in this game and there is nothing to guess. Abilities that
+    merely *reduce* damage (Thick Fat, Heatproof, Filter, Solid Rock, Wonder
+    Guard) are not modelled at all.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: str = Field(description="The attacking type.")
+    weak_members: list[str] = Field(
+        description=(
+            "Members it hits for 2x or 4x. A member with a resolved ability immunity to "
+            "this type is not listed here even when its typing is weak to it."
+        )
+    )
+    resist_members: list[str] = Field(
+        description=(
+            "Members that take 0.5x or less, including 0x from typing or from a resolved "
+            "ability immunity — the switch-ins, if there are any. **An empty list means "
+            "none was found, not that none exists:** a member whose ability this report "
+            "could not resolve is counted on typing alone, and damage-reducing abilities "
+            "are not modelled."
+        )
+    )
+
+
+class TeamReport(SourcedResult):
+    """The `team_check` response — **advisory, never enforcing** (PLAN.md §1.3).
+
+    It does not encode species clause, dupes clause, first-encounter-only or
+    level caps as rules. It surfaces the facts a challenge runner needs — these
+    two share a type, this item does not exist in this game, this move comes from
+    a tutor — and leaves the ruleset to the human, because house rules vary
+    wildly and a tool that picks one is wrong for everybody else. So
+    :class:`TeamObservation` has kinds like ``duplicate-line`` and never
+    ``dupes-clause-violation``.
+
+    Not a :class:`PagedResult`: the team is a caller-supplied list of at most six,
+    so every member is answered. A paginated team check would let a team be
+    declared legal on the strength of a page, the same reason
+    :class:`LegalityReport` is unpaginated.
+    """
+
+    game: str
+    generation: int
+    members: list[TeamMemberCheck]
+    all_moves_legal: bool = Field(
+        description=(
+            "True only if every move given for every member is obtainable in this game. "
+            "True vacuously when no moves were given at all — check each member's "
+            "`all_moves_legal` for null before reading anything into it."
+        )
+    )
+    types_covered: list[str] = Field(
+        description=(
+            "Types some damaging move on this team hits for super-effective damage, "
+            "measured against each type on its own rather than against real dual "
+            "typings."
+        )
+    )
+    coverage_gaps: list[str] = Field(
+        description=(
+            "Types that exist in this game and that nothing on the team hits super "
+            "effectively. Empty when no damaging moves were given, which is not the "
+            "same as 'no gaps' — `notes` says which case applies."
+        )
+    )
+    shared_weaknesses: list[TypePressure] = Field(
+        default_factory=list,
+        description=(
+            "Attacking types two or more members are weak to, worst first. Computed from "
+            "typing plus whichever abilities could be resolved — see "
+            "TypePressure.resist_members for what that does and does not cover."
+        ),
+    )
+    duplicate_types: list[str] = Field(
+        default_factory=list, description="Types carried by more than one member."
+    )
+    observations: list[TeamObservation] = Field(default_factory=list)
+    advisory_note: str = Field(
+        description="Standing statement that this tool reports rather than enforces."
+    )
+    confidence: Confidence
+    coverage_note: str | None = Field(
+        default=None,
+        description="Why this report may be incomplete. Null only when `confidence` is 'high'.",
+    )
+    notes: list[str] = Field(default_factory=list)
+
+
+class TeamExport(SourcedResult):
+    """The `export_team` response: a paste-ready Showdown team.
+
+    ``text`` is the whole point; everything else is about what the formatter had
+    to leave out. It is a formatter and not a checker — it will happily render an
+    illegal moveset, and says so — because the checker is ``team_check`` and
+    having two tools disagree about legality is worse than having one answer it.
+    """
+
+    game: str
+    generation: int
+    format: Literal["showdown"] = Field(
+        default="showdown", description="Export format. Only Showdown text is supported."
+    )
+    text: str = Field(description="The team, in Pokémon Showdown's paste format.")
+    notes: list[str] = Field(
+        default_factory=list,
+        description=(
+            "What was adjusted or omitted to keep the paste valid — a dropped "
+            "unrecognised nature, an ability that does not exist in this generation, "
+            "an item that does not exist in this game."
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
 # wiki_lookup — Tier 2
 # ---------------------------------------------------------------------------
 

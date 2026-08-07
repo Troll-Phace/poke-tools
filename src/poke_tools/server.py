@@ -1,9 +1,16 @@
 """MCP server entrypoint and tool registration.
 
-Registered so far: the Phase 0 diagnostic (`server_info`), the eight Tier 1 tools
-of phases 1-2, and Phase 3's `wiki_lookup`. `team_check` and `export_team` land
-in Phase 4 — at which point the surface exceeds PLAN.md §0.4's ~10 budget and
-§3.2's consolidation ladder has to be climbed.
+Registered: the Phase 0 diagnostic (`server_info`), the eight Tier 1 tools of
+phases 1-2, Phase 3's `wiki_lookup`, and Phase 4's `team_check` and
+`export_team`. **Twelve tools, against PLAN.md §0.4's ~10 budget** — a
+deliberate departure, decided on evidence §0.4 was written without: in live
+Cherry Studio testing Qwen 3.8 selected correctly from nine tools three times
+out of three, including one unprompted parallel two-tool call. The single
+failure was an *enum nested two levels into the schema* rather than a selection
+error, and is fixed below. §3.2's consolidation ladder stays available and
+evidence-driven; it is not climbed pre-emptively, because folding `get_move`
+into `get_learnset` as a `verbose` flag muddies that tool's contract, and a
+muddy tool is harder for a small model than one more clean tool.
 
 House style for every tool, per PLAN.md §0.6.1 and §0.4:
 
@@ -11,7 +18,14 @@ House style for every tool, per PLAN.md §0.6.1 and §0.4:
 * constrain arguments with ``Literal[...]`` rather than free-form strings
 * **flat arguments only** — ``methods: ["level-up", "machine"]``, never a nested
   filter object. This targets a small open-weight model's tool-calling ceiling
-  and is a hard constraint, not a style preference
+  and is a hard constraint, not a style preference. ``team_check`` and
+  ``export_team`` are the one exception the rule cannot cover: a team is a list
+  of Pokémon each carrying its own moves and item, and the flat alternative —
+  parallel ``pokemon[]`` / ``moves[]`` / ``items[]`` lists — fails *silently*
+  when they come back ragged, checking one Pokémon against another's moveset.
+  So the nesting is exactly one level, every field inside it is a scalar or a
+  list of scalars, and the tool description spells the object out by hand
+  (see :data:`TeamArg`) rather than trusting the model to follow a ``$ref``
 * describe and bound arguments with ``Annotated[T, Field(...)]``
 * **name an enum's valid values in its ``description`` string**, not only in the
   schema. Qwen 3.8 got ``game`` right first try and ``methods`` wrong twice —
@@ -68,10 +82,15 @@ from poke_tools.models import (
     MoveCard,
     ObtainableList,
     SpeciesCard,
+    TeamExport,
+    TeamMember,
+    TeamReport,
     TypeMatchupCard,
     WikiSection,
 )
-from poke_tools.tools.analysis import PokemonType
+from poke_tools.tools.analysis import MAX_TEAM_SIZE, PokemonType
+from poke_tools.tools.analysis import export_team as _export_team
+from poke_tools.tools.analysis import team_check as _team_check
 from poke_tools.tools.analysis import type_matchup as _type_matchup
 from poke_tools.tools.dex import find_pokemon as _find_pokemon
 from poke_tools.tools.items import get_item as _get_item
@@ -199,6 +218,30 @@ LimitArg = Annotated[
         ge=1,
         le=db.MAX_ROWS,
         description=f"Maximum rows to return. Hard cap {db.MAX_ROWS}.",
+    ),
+]
+
+#: The team argument, shared by ``team_check`` and ``export_team``.
+#:
+#: **The object's fields are spelled out in the description on purpose.** A
+#: ``list[TeamMember]`` serialises as ``items: {$ref: '#/$defs/TeamMember'}``,
+#: which puts every field name behind an indirection — the same class of problem
+#: as the nested ``methods`` enum Qwen 3.8 could not see, and the reason
+#: :func:`_enum_values` exists. Prose the model reads on the way past costs a
+#: few hundred tokens once and removes the guess.
+TeamArg = Annotated[
+    list[TeamMember],
+    Field(
+        min_length=1,
+        max_length=MAX_TEAM_SIZE,
+        description=(
+            f"The team, 1 to {MAX_TEAM_SIZE} Pokémon. Each entry is an object with these "
+            "keys and no others: `pokemon` (required, a species name), `moves` (up to 4 "
+            "move names), `item`, `ability`, `nature`, `level`. Everything except "
+            "`pokemon` may be omitted. Example: "
+            '[{"pokemon": "typhlosion", "moves": ["flamethrower", "earthquake"], '
+            '"item": "charcoal", "ability": "blaze", "level": 50}, {"pokemon": "lanturn"}].'
+        ),
     ),
 ]
 
@@ -474,6 +517,42 @@ async def type_matchup(
 ) -> TypeMatchupCard:
     """Generation-correct type chart for one or two types."""
     return _type_matchup(type1, game, type2=type2, conn=_connection(ctx))
+
+
+@mcp.tool(
+    title="Team check",
+    description=(
+        "Check a whole team at once: whether every moveset is actually obtainable in this "
+        "game, whether the held items exist in it, what types the team cannot hit for "
+        "super-effective damage, what it is collectively weak to, and where it repeats "
+        "itself. **It reports; it does not enforce.** Species clause, dupes clause, "
+        "first-encounter-only and level caps are deliberately not applied — `observations` "
+        "gives you the facts (these two are the same evolution line, this move is "
+        "tutor-only, this move is an HM) and your ruleset decides what they mean. Read "
+        "each member's `notes`: they carry the underlying tools' caveats word for word, "
+        "including which form was answered for and which items this game does not have."
+    ),
+    annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False),
+)
+async def team_check(ctx: Context, team: TeamArg, game: GameArg) -> TeamReport:
+    """Legality, item availability, coverage and redundancy for a whole team."""
+    return _team_check(team, game, conn=_connection(ctx))
+
+
+@mcp.tool(
+    title="Export team",
+    description=(
+        "Render a team as Pokémon Showdown paste text, ready for a damage calculator. "
+        "Formatting only — it checks nothing and will happily render an illegal moveset, "
+        "so run team_check first. Gen-correct: both supported games have abilities and "
+        "neither has Terastallization, so an Ability line is emitted and a Tera Type line "
+        "never is."
+    ),
+    annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False),
+)
+async def export_team(ctx: Context, team: TeamArg, game: GameArg) -> TeamExport:
+    """Showdown-format export of a team."""
+    return _export_team(team, game, conn=_connection(ctx))
 
 
 @mcp.tool(
