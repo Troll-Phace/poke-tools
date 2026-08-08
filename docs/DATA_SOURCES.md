@@ -19,12 +19,24 @@ field. Nothing is inferred, synthesised, or filled in from a fourth place.
 **Bulbapedia content is CC BY-NC-SA 2.5: non-commercial, share-alike,
 attribution required.**
 
-That is fine for personal tooling, which is what this is. It is *not* fine for
-anything public-facing or commercial. **If this project ever becomes something
-public, the Bulbapedia tier has to be dropped or replaced** — not merely
-attributed. The non-commercial clause is the binding one, and share-alike would
-additionally reach any derived database that embeds the content, which
-`wiki_cache` does.
+That is fine for personal tooling, which is what this is.
+
+**Two different things get conflated here, so be precise about which one you are
+doing.** *Publishing the source* is permitted: CC BY-NC-SA 2.5 allows
+redistribution with attribution, share-alike, and non-commercial use, and this
+repository is public on those terms — see `NOTICE`, which scopes the licence to
+`tests/fixtures/wiki/*.json` and keeps them outside the MIT grant covering the
+code. *Shipping a product* that serves Bulbapedia-derived answers is the case
+the licence actually bites on. **If this becomes something commercial, the
+Bulbapedia tier has to be dropped or replaced** — not merely attributed. The
+non-commercial clause is the binding one and is not waivable by attribution,
+and share-alike additionally reaches any derived database that embeds the
+content, which `wiki_cache` does.
+
+An earlier version of this section said "anything public-facing" where it meant
+"anything commercial." Source on a public host and a public service are not the
+same obligation, and the stricter reading would have forbidden publishing this
+repository at all.
 
 The obligation is honoured in the data path rather than in a docstring nobody
 ships: every `wiki_lookup` response carries a `url` and a `license` field

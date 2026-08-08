@@ -1,0 +1,53 @@
+poke-tools — third-party material and its terms
+===============================================
+
+The code in this repository is MIT licensed (see LICENSE). The material below
+is not, and the MIT grant does not extend to it.
+
+Nothing here is affiliated with, endorsed by, or sponsored by Nintendo,
+Game Freak, Creatures Inc., The Pokémon Company, or Bulbagarden. Pokémon is
+their intellectual property. This is personal tooling.
+
+
+1. Bulbapedia wikitext — CC BY-NC-SA 2.5, NON-COMMERCIAL
+--------------------------------------------------------
+
+    tests/fixtures/wiki/*.json
+
+Those files contain wikitext and parse trees recorded from Bulbapedia
+(https://bulbapedia.bulbagarden.net) through this project's own throttled
+client. They are here so the test suite can exercise the wiki parsers without
+generating live traffic against a rate-limited wiki.
+
+Bulbapedia content is licensed CC BY-NC-SA 2.5:
+https://creativecommons.org/licenses/by-nc-sa/2.5/
+
+  * Attribution — Bulbapedia, and the page each fixture records. Each fixture
+    carries its source page and revision id.
+  * ShareAlike — adaptations must carry the same licence.
+  * NonCommercial — you may not use this material commercially. This is the
+    binding clause and it is not waivable by attribution.
+
+`wiki_lookup` also fetches from Bulbapedia at runtime. Every response carries
+`url` and `license` fields, so attribution travels with the content rather than
+depending on a downstream consumer remembering it.
+
+**If you build something commercial on this, the Bulbapedia tier has to be
+dropped or replaced — not merely attributed.** See docs/DATA_SOURCES.md §1.
+
+
+2. PokéAPI / veekun pokédex CSVs — permissive
+----------------------------------------------
+
+Ingested at build time from https://github.com/PokeAPI/pokeapi
+(`data/v2/csv`), which derives from veekun's pokédex. Permissively licensed.
+Not redistributed here — `poke-tools-build` downloads them, and the built
+`data/pokedex.sqlite` is gitignored.
+
+
+3. Pokémon Showdown learnsets — MIT
+------------------------------------
+
+Fetched at build time from https://play.pokemonshowdown.com/data/learnsets.json
+(https://github.com/smogon/pokemon-showdown). Used as a cross-check against the
+PokéAPI data, never as the primary source. Not redistributed here.
