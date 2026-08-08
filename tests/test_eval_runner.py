@@ -168,6 +168,67 @@ def test_row_matching_is_a_subset_match_over_typed_values() -> None:
     assert not _row_matches(row, {"tm": "TM35"})
 
 
+def test_an_absent_key_answers_null_and_only_null() -> None:
+    """*** The one relaxation in the matcher, and the line it must not cross. ***
+
+    :class:`~poke_tools.models.MoveLegality` drops its ``None`` fields from the
+    wire (the ``@model_serializer`` trick ``WikiRow`` already used), which is where
+    ~9.9% of a six-member team report went. Four cases assert ``tm: null`` on
+    ``can_learn`` rows — "no TM teaches Psyduck Psychic", the spurious-TM-label
+    defect that put 27 wrong labels in Emerald — and that fact is unchanged by the
+    key vanishing. So absence satisfies ``null``.
+
+    It must not satisfy ``false``. ``available_in_game`` is three-valued and
+    ``null`` means "upstream records nothing", never "no" — entry 5 on progress.md's
+    guards-that-cannot-fail list is this exact field losing its third value to
+    ``False == 0``. A matcher where absence answered ``false`` would convert every
+    unknown into a denial the moment a model started dropping ``None``, and every
+    case would stay green through it.
+    """
+    dropped = {"move": "psychic", "legal": True, "methods": ["egg"]}
+    explicit = {"move": "psychic", "legal": True, "methods": ["egg"], "tm": None}
+
+    # null is answered by an absent key and by an explicit null, identically.
+    assert _row_matches(dropped, {"move": "psychic", "tm": None})
+    assert _row_matches(explicit, {"move": "psychic", "tm": None})
+
+    # ... and not by a value, in either spelling.
+    assert not _row_matches({**dropped, "tm": "TM29"}, {"move": "psychic", "tm": None})
+
+    # *** The complement: false is answered ONLY by an explicit False. ***
+    assert not _row_matches(dropped, {"available_in_game": False}), (
+        "an absent key must not satisfy a `false` expectation — that is the "
+        "three-valued field collapsing into two, silently"
+    )
+    assert _row_matches({**dropped, "available_in_game": False}, {"available_in_game": False})
+    assert not _row_matches({**dropped, "available_in_game": None}, {"available_in_game": False})
+
+    # A non-null expectation on a missing key stays a plain miss.
+    assert not _row_matches(dropped, {"tm": "TM35"})
+    assert not _row_matches(dropped, {"level": 0})
+
+
+def test_fields_treats_absence_as_null_with_the_same_asymmetry() -> None:
+    """The scalar-card path follows the row path, or the two spellings diverge."""
+
+    class Card:
+        def __init__(self, **kwargs: object) -> None:
+            self.__dict__.update(kwargs)
+
+        def model_dump(self, mode: str = "python") -> dict[str, object]:
+            return dict(self.__dict__)
+
+    case = EvalCase(name="c", tool="get_move", expect={"fields": {"tm": None}})
+    check_case(case, Card(move="psychic"))  # absent → null, passes
+    check_case(case, Card(move="psychic", tm=None))  # explicit → null, passes
+    with pytest.raises(AssertionError):
+        check_case(case, Card(move="psychic", tm="TM29"))
+
+    denied = EvalCase(name="c", tool="get_item", expect={"fields": {"available_in_game": False}})
+    with pytest.raises(AssertionError, match="has no field"):
+        check_case(denied, Card(item="leftovers"))
+
+
 def test_every_list_expectation_in_the_suite_is_written_as_a_real_list() -> None:
     """*** The repr-string style must not creep back into the YAML. ***
 

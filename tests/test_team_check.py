@@ -826,17 +826,24 @@ def test_the_advisory_note_says_no_ruleset_is_applied(conn: sqlite3.Connection) 
 #: **The criterion, not the measurement.** §0.6.6 budgets a paged Tier-1 *list*
 #: response at ~4 KB; a six-member team report is a different shape — six species
 #: cards' worth of verdicts, items, notes and observations in one payload — and
-#: whether its size is acceptable, and whether to pull the deferred
-#: ``@model_serializer`` lever that drops ``None`` fields from ``MoveLegality``
-#: (the trick ``WikiRow`` already uses), is a review decision rather than a test's.
+#: whether its size is acceptable is a review decision rather than a test's.
 #:
-#: So this ceiling is deliberately loose and deliberately *not* the current
-#: figure. Pinning the measured number is how a previous guard turned every
-#: harmless byte of new prose into a red test that named no defect. What must not
-#: happen quietly is the report growing by an order of magnitude — that is what
-#: this catches, and the failure message reports the real number so the reviewer
-#: can set a tighter one on evidence.
-SIX_MEMBER_REPORT_CEILING_BYTES = 16_000
+#: **Tightened 16,000 → 12,000 in Phase 5, on evidence rather than on the
+#: measurement.** It stays a criterion and not a pin: pinning the measured number
+#: is how a previous guard turned every harmless byte of new prose into a red test
+#: that named no defect. The evidence for 12 KB is that the figure is stable
+#: *across teams*, not just across runs — the advisory corpus's deliberately
+#: awkward party and a realistic Cyndaquil-start HGSS six (the Phase 4 gate team,
+#: four moves and a held item each) measured 9,065 B and 8,204 B, under an
+#: earlier 9,259 B / 9,229 B pair. A ceiling only ~30% above the larger of them
+#: still absorbs ordinary prose growth while catching a 30% jump, which 16,000
+#: (76% headroom) would have let through in silence.
+#:
+#: The deferred ``@model_serializer`` lever has now been pulled — ``MoveLegality``
+#: drops its ``None`` fields, as ``WikiRow`` does — so it is no longer available
+#: as the answer to a future breach. The next reviewer to see this red is looking
+#: at genuinely new payload, not at a missed optimisation.
+SIX_MEMBER_REPORT_CEILING_BYTES = 12_000
 
 
 def test_a_six_member_report_stays_within_its_size_ceiling(conn: sqlite3.Connection) -> None:
@@ -849,9 +856,69 @@ def test_a_six_member_report_stays_within_its_size_ceiling(conn: sqlite3.Connect
     assert size <= SIX_MEMBER_REPORT_CEILING_BYTES, (
         f"a six-member report serialises to {size} bytes against a ceiling of "
         f"{SIX_MEMBER_REPORT_CEILING_BYTES}. PLAN.md §0.6.6 budgets a paged list response at "
-        "~4 KB; this is a different shape and its ceiling is a review decision, but an "
-        "order-of-magnitude change is not one to make silently. The documented lever is a "
-        "`@model_serializer` dropping None fields from MoveLegality, as WikiRow already does."
+        "~4 KB; this is a different shape and its ceiling is a review decision, but a "
+        "30%-plus jump is not one to make silently. Two independent six-member parties "
+        "measured ~8.2 KB and ~9.1 KB when this was set, so read the number above as a "
+        "budget with headroom rather than as a limit you have just discovered."
+    )
+
+
+def test_a_realistic_party_measures_close_to_the_corpus_one(conn: sqlite3.Connection) -> None:
+    """*** What makes the ceiling a budget and not a coincidence. ***
+
+    A single measured team says what one payload costs; two dissimilar teams
+    landing within a kilobyte of each other say the number is a property of the
+    *shape* — six members, four verdicts and an item each — rather than of the
+    particular Pokémon somebody picked. Without this, tightening the ceiling would
+    be fitting a threshold to one sample, and the next team to be tested might sit
+    on the other side of it for no reason anyone could name.
+
+    The team is the one Qwen 3.8 actually built through Cherry Studio at the
+    Phase 4 gate, which is the closest thing this suite has to a production
+    payload.
+    """
+    party = [
+        {
+            "pokemon": "typhlosion",
+            "moves": ["flamethrower", "earthquake", "thunder-punch", "swift"],
+            "item": "charcoal",
+        },
+        {
+            "pokemon": "gyarados",
+            "moves": ["waterfall", "dragon-dance", "ice-fang", "bite"],
+            "item": "mystic-water",
+        },
+        {
+            "pokemon": "ampharos",
+            "moves": ["thunderbolt", "signal-beam", "thunder-wave", "light-screen"],
+            "item": "magnet",
+        },
+        {
+            "pokemon": "heracross",
+            "moves": ["megahorn", "close-combat", "aerial-ace", "night-slash"],
+            "item": "black-belt",
+        },
+        {
+            "pokemon": "lapras",
+            "moves": ["surf", "ice-beam", "body-slam", "thunderbolt"],
+            "item": "nevermeltice",
+        },
+        {
+            "pokemon": "crobat",
+            "moves": ["fly", "bite", "confuse-ray", "toxic"],
+            "item": "sharp-beak",
+        },
+    ]
+    realistic = len(team_check(party, "heartgold-soulsilver", conn=conn).model_dump_json())
+    corpus = len(
+        team_check(ADVISORY_CORPUS[0][1], "heartgold-soulsilver", conn=conn).model_dump_json()
+    )
+
+    assert realistic <= SIX_MEMBER_REPORT_CEILING_BYTES
+    assert abs(realistic - corpus) < 2_000, (
+        f"a realistic party measures {realistic} B against the corpus party's {corpus} B. "
+        "The ceiling was tightened on the premise that six-member reports cluster; if they "
+        "have stopped clustering, the ceiling is fitted to one team and needs re-deriving."
     )
 
 
@@ -961,7 +1028,173 @@ PROSE_CLAIMS: list[tuple[str, object, str]] = [
             "assert that nothing resists a type. Omit the claim rather than make it"
         ),
     ),
+    (
+        "none of them is obtainable in this game",
+        lambda report: (
+            any(member.moves for member in report.members)
+            and not any(verdict.legal for member in report.members for verdict in member.moves)
+        ),
+        (
+            "a legal move verdict is present, so it is false that none of the given "
+            "moves is obtainable"
+        ),
+    ),
+    (
+        "every legal move on this team is a status move",
+        lambda report: (
+            any(verdict.legal for member in report.members for verdict in member.moves)
+            and not report.types_covered
+            and not report.coverage_gaps
+        ),
+        (
+            "the report covers types super-effectively (or has no legal move at all), so "
+            "the status-only state it describes is not the state it is in"
+        ),
+    ),
 ]
+
+#: Notes that make no checkable claim about *this* answer's shape, each with the
+#: reason it needs no predicate. Read by
+#: :func:`test_every_note_constant_is_covered_by_a_prose_claim`, which is what
+#: makes :data:`PROSE_CLAIMS` a registry rather than a blacklist.
+#:
+#: An entry here is a decision on the record, not a mute button: it has to name a
+#: reason, and a stale entry naming a deleted constant fails.
+PROSE_CLAIM_EXEMPTIONS: dict[str, str] = {
+    "ADVISORY_NOTE": (
+        "states the tool's policy (§1.3 advisory-not-enforcing), not a property of this "
+        "report. Its claim is asserted structurally by section 4's wording guard, which "
+        "fails if any observation text rules on anything"
+    ),
+    "_COVERAGE_METHOD_NOTE": (
+        "emitted unconditionally and describes how coverage is *measured* — per single "
+        "type, not against real dual typings. There is no report state it could "
+        "contradict, because it says nothing about any particular report"
+    ),
+    "_TYPE_PRESSURE_ABILITY_NOTE": (
+        "a modelling under-claim in both directions: only outright immunities are "
+        "modelled, so neither the damage reducers (Thick Fat, Filter) nor the amplifiers "
+        "(Dry Skin's Gen-4 1.25x from Fire) move a verdict. It claims *less* than the "
+        "fields show, which cannot be contradicted by them. Its one checkable half — an "
+        "empty `resist_members` means none was found rather than that none exists — is "
+        "pinned by test_damage_reducing_abilities_are_disclosed_as_unmodelled against the "
+        "field's own description, which is the half a caller reads without the note"
+    ),
+}
+
+
+def _note_constants() -> dict[str, str]:
+    """Every module-level ``*_NOTE`` string in ``analysis``, read off the module.
+
+    Read rather than retyped for the same reason :data:`ALL_OBSERVATION_KINDS` is:
+    a list maintained by hand is a list that goes stale the first time somebody
+    adds a note in a hurry.
+    """
+    return {
+        name: value
+        for name, value in vars(analysis).items()
+        if name.endswith("_NOTE") and isinstance(value, str)
+    }
+
+
+def _notes_missing_a_claim(
+    notes: dict[str, str],
+    claims: list[tuple[str, object, str]],
+    exemptions: dict[str, str],
+) -> list[str]:
+    """Note constants that neither match a claim fragment nor carry an exemption.
+
+    A pure function taking its three inputs as arguments, so the complement test
+    below can run it against a *synthetic* note and prove it actually fires —
+    rather than asserting an empty set against an empty set, which is entry 4 on
+    progress.md's "guards that structurally cannot fail" list.
+    """
+    fragments = [fragment for fragment, _, _ in claims]
+    return sorted(
+        name
+        for name, text in notes.items()
+        if name not in exemptions and not any(fragment in text.lower() for fragment in fragments)
+    )
+
+
+def test_every_note_constant_is_covered_by_a_prose_claim() -> None:
+    """*** What makes PROSE_CLAIMS a registry and not a blacklist. ***
+
+    ``PROSE_CLAIMS`` matches by substring, so a sentence containing none of its
+    fragments is never evaluated against any predicate at all. ``code-reviewer``
+    demonstrated the consequence rather than asserting it: replacing
+    ``_NO_LEGAL_MOVES_NOTE`` with a brand-new sentence that flatly contradicts the
+    only state that emits it — "Every member's moveset was verified obtainable in
+    this game, and `coverage_gaps` lists every type this team cannot hit" — left
+    the suite at 1016 passed. The docstring above claimed "adding a self-describing
+    sentence to the tool means adding a row here"; nothing enforced it.
+
+    This is the registry+complement shape the suite already uses twice
+    (``ADVISORY_CORPUS`` against every ``TeamObservationKind``,
+    ``EXPECTED_TOOL_NAMES`` against the tool budget): enumerate what the module
+    actually defines, and require each one to be answered.
+
+    **Known limit, stated rather than implied:** this covers note *constants*. The
+    HM, tutor and item sentences are built inline at their call sites, as are every
+    observation ``detail``; those are still reached by the sweep's blacklist match
+    but are not forced to have a predicate. Promoting them to constants would bring
+    them under this guard.
+    """
+    notes = _note_constants()
+    assert notes, "no *_NOTE constants found in analysis — this guard would be inert"
+
+    missing = _notes_missing_a_claim(notes, PROSE_CLAIMS, PROSE_CLAIM_EXEMPTIONS)
+    assert not missing, (
+        "these notes describe the answer in prose that no PROSE_CLAIMS fragment matches, "
+        f"so nothing checks them against the report they sit in: {missing}. Add a "
+        "(fragment, predicate, why) row, or add a PROSE_CLAIM_EXEMPTIONS entry saying why "
+        "the sentence makes no claim about the shape of the answer."
+    )
+
+
+def test_the_note_registry_actually_fires_on_an_uncovered_note() -> None:
+    """Assert the complement: the guard above must be able to fail.
+
+    Runs the same pure function against a synthetic note carrying the exact
+    sentence the reviewer used, plus a synthetic exemption. Without this, the
+    registry test passes by comparing two empty sets and would keep passing if
+    ``_note_constants`` silently returned nothing or the fragment match were
+    inverted.
+    """
+    reviewers_sentence = (
+        "Every member's moveset was verified obtainable in this game, and "
+        "`coverage_gaps` lists every type this team cannot hit."
+    )
+    invented = {"_INVENTED_NOTE": reviewers_sentence}
+
+    assert _notes_missing_a_claim(invented, PROSE_CLAIMS, {}) == ["_INVENTED_NOTE"], (
+        "a new self-describing note matched by no fragment must be reported as uncovered"
+    )
+    assert _notes_missing_a_claim(invented, PROSE_CLAIMS, {"_INVENTED_NOTE": "because"}) == [], (
+        "an explicit exemption must silence it — otherwise the escape hatch is unusable "
+        "and the next agent will delete the guard instead of using it"
+    )
+    covered = {"_INVENTED_NOTE": "No moves were given for any member."}
+    assert _notes_missing_a_claim(covered, PROSE_CLAIMS, {}) == [], (
+        "a note whose text a fragment matches must count as covered"
+    )
+
+
+def test_no_prose_claim_exemption_is_stale() -> None:
+    """An exemption naming a constant that no longer exists is a rule with no subject.
+
+    Deleting or renaming a note must not leave behind a permanent hole that the
+    next note to take that name falls straight through.
+    """
+    notes = _note_constants()
+    orphaned = sorted(set(PROSE_CLAIM_EXEMPTIONS) - set(notes))
+    assert not orphaned, (
+        f"PROSE_CLAIM_EXEMPTIONS names constants analysis no longer defines: {orphaned}"
+    )
+    assert all(reason.strip() for reason in PROSE_CLAIM_EXEMPTIONS.values()), (
+        "every exemption must carry a reason; an empty one is a mute button"
+    )
+
 
 #: Every team the sweep runs, spanning the three states the collapsed note used to
 #: conflate plus the ordinary ones. Asserted below to actually reach all three.
@@ -1014,6 +1247,60 @@ def test_no_note_contradicts_the_fields_beside_it(conn: sqlite3.Connection) -> N
     assert not problems, (
         "a report describes itself in prose that its own structured fields contradict:\n"
         + "\n".join(problems)
+    )
+
+
+#: Fragments the sweep is *not* expected to observe, each with the reason. Read by
+#: :func:`test_every_prose_claim_is_reached_or_declared_unreachable`.
+UNREACHED_PROSE_CLAIMS: dict[str, str] = {
+    "nothing on the team resists it": (
+        "a must-never-appear fragment: its predicate is a bare False, so observing it "
+        "IS the failure. Absence is the pass"
+    ),
+    "no moves to assess legality": (
+        "no longer emitted anywhere in analysis (grep confirms the phrasing is gone). "
+        "Retained as a guard against the wording coming back attached to a state it "
+        "does not describe, which is how the original defect was written"
+    ),
+}
+
+
+def test_every_prose_claim_is_reached_or_declared_unreachable(conn: sqlite3.Connection) -> None:
+    """The other half of the coupling: a row nothing reaches checks nothing.
+
+    ``test_every_note_constant_is_covered_by_a_prose_claim`` fails when a note has
+    no row. This fails when a row has no note — a fragment matching no sentence any
+    corpus team produces means its predicate is never evaluated, so it is exactly as
+    inert as the blacklist gap it was added to close, and just as green.
+
+    The escape hatch is declaration, not deletion: a fragment can legitimately be
+    unreachable (a must-never-appear claim, or a retired phrasing kept as a guard),
+    but that has to be stated with a reason rather than inferred from a passing run.
+    """
+    observed: set[str] = set()
+    for game, team in PROSE_SWEEP_TEAMS:
+        report = team_check(team, game, conn=conn)
+        for _where, sentence in _all_prose(report):
+            for fragment, _predicate, _why in PROSE_CLAIMS:
+                if fragment in sentence.lower():
+                    observed.add(fragment)
+
+    fragments = {fragment for fragment, _, _ in PROSE_CLAIMS}
+    unreached = sorted(fragments - observed - set(UNREACHED_PROSE_CLAIMS))
+    assert not unreached, (
+        f"no corpus team produces prose matching {unreached}, so those predicates never "
+        "run. Add a team to PROSE_SWEEP_TEAMS that reaches the state, or declare the "
+        "fragment in UNREACHED_PROSE_CLAIMS with the reason it cannot be reached."
+    )
+
+    stale = sorted(set(UNREACHED_PROSE_CLAIMS) - fragments)
+    assert not stale, f"UNREACHED_PROSE_CLAIMS names fragments PROSE_CLAIMS no longer has: {stale}"
+
+    contradicted = sorted(observed & set(UNREACHED_PROSE_CLAIMS))
+    assert not contradicted, (
+        f"{contradicted} is declared unreachable but the sweep just observed it. For a "
+        "must-never-appear fragment that is the defect it exists to catch; for a retired "
+        "phrasing it means the wording is back and the declaration is now a lie."
     )
 
 
@@ -1253,13 +1540,15 @@ def test_damage_reducing_abilities_are_disclosed_as_unmodelled(
         conn=conn,
     )
     assert report.shared_weaknesses, "this team must produce a shared weakness row"
-    assert any(
-        "thick fat" in note.lower() or "reduce" in note.lower() for note in report.notes
-    ), "nothing tells the reader that damage-reducing abilities are outside the model"
+    assert any("thick fat" in note.lower() or "reduce" in note.lower() for note in report.notes), (
+        "nothing tells the reader that damage-reducing abilities are outside the model"
+    )
 
-    described = type(report).model_json_schema()["$defs"]["TypePressure"]["properties"][
-        "resist_members"
-    ]["description"].lower()
+    described = (
+        type(report)
+        .model_json_schema()["$defs"]["TypePressure"]["properties"]["resist_members"]["description"]
+        .lower()
+    )
     assert "not that none exists" in described or "none was found" in described, (
         "the field's own description must say that an empty resist list means none was "
         "found rather than that none exists — that is the half a caller reads without "

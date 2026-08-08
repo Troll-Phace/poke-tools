@@ -314,7 +314,22 @@ class Learnset(PagedResult):
 
 
 class MoveLegality(BaseModel):
-    """Verdict for one move in a `can_learn` batch."""
+    """Verdict for one move in a `can_learn` batch.
+
+    **Null fields are omitted on the wire** (see :meth:`_drop_empty_fields`), the
+    same treatment :class:`WikiRow` gets and for the same reason: this is the one
+    row type that repeats both *per move* and *per team member*, so a six-member
+    ``team_check`` carries twenty-four of them. Four of the seven fields are
+    mutually exclusive in practice — a machine row has no ``level``, a level-up
+    row has no ``tm``, a legal move has no ``reason`` — so most of each row was
+    ``null``.
+
+    ``legal`` is a required bool and is always emitted. Only ``None`` is dropped,
+    never a falsy value: ``legal: false`` is the single most load-bearing fact in
+    the response, and progress.md records a real bug where ``False == 0`` let a
+    three-valued field be satisfied by a zero. A reader may therefore treat an
+    absent key as ``null`` and must not treat it as ``false``.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -330,8 +345,23 @@ class MoveLegality(BaseModel):
         description="Species whose egg list yields this move, when 'egg' is among the methods.",
     )
     reason: str | None = Field(
-        default=None, description="Why an illegal move is illegal. Null when legal."
+        default=None, description="Why an illegal move is illegal. Omitted when legal."
     )
+
+    @model_serializer(mode="plain")
+    def _drop_empty_fields(self) -> dict[str, object]:
+        """Serialise only the fields that carry a value.
+
+        Deliberately ``is not None`` rather than a falsiness test. ``level`` can
+        legitimately be 0-ish, ``methods`` can legitimately be empty on an
+        illegal move, and ``legal`` is exactly the field whose ``False`` must
+        survive.
+        """
+        return {
+            name: value
+            for name, value in ((n, getattr(self, n)) for n in type(self).model_fields)
+            if value is not None
+        }
 
 
 class LegalityReport(SourcedResult):
@@ -571,7 +601,18 @@ class ItemCard(SourcedResult):
     """
 
     item: str = Field(description="Canonical item identifier, e.g. 'leftovers'.")
-    name: str
+    name: str = Field(
+        description=(
+            "The item's **present-day** display name, which is also the spelling a "
+            "Showdown paste needs. Older games sometimes printed a different name on "
+            "screen — HeartGold/SoulSilver call the Dowsing Machine the 'Dowsing MCHN' "
+            "and Emerald calls it the 'Itemfinder' — and this field is not rewritten to "
+            "match, because `export_team` builds its paste from it. When a verified "
+            "era-correct spelling exists for the requested game it is stated in `notes`; "
+            "that list is not exhaustive, so for any item, treat this name as the "
+            "modern one and do not assert it is what the player will read in-game."
+        )
+    )
     game: str
     available_in_game: bool | None = Field(
         default=None,

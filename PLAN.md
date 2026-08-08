@@ -178,9 +178,37 @@ Measured against the built tool (`get_learnset("garchomp", "heartgold-soulsilver
 {"move":"aerial-ace","method":"machine","tm":"TM40","type":"flying","power":60,"damage_class":"physical"}
 ```
 
+**State the serialization whenever you quote a size.** That same call measures **5,629 bytes** under `model_dump_json()` or a compact dump that keeps nulls — 35% larger, and both numbers are correct. `docs/ARCHITECTURE.md` quotes the 5.6 KB figure for exactly this reason. A size with no stated method is not a measurement, and this document told readers to judge field-set decisions "against 4 KB" without saying which 4 KB.
+
 **The minimal default field set in §1.3 (`move, type, power`) is also stale.** `method` and `tm` are not optional extras — "which TM, and can I get it yet" is the question the tool exists to answer, and stripping them would leave the model to guess. The honest default is the six fields above; `damage_class` is the only genuinely droppable one, worth ~1 KB across a full page.
 
 **Budget accordingly: a paged Tier-1 list response costs ~4 KB, not ~570 bytes.** That's acceptable — it's still three orders of magnitude below the 912 KB browser page §0.1 measured — but §3.2's tool-consolidation ladder and any future field-set decision should be judged against 4 KB. Tier 2's <6 KB target in §2 phase 3 is unaffected; that one does describe parsed wiki output.
+
+#### 0.6.7 `uvx` silently serves stale code — use the venv console script
+
+§1.4 originally called `uvx` "the reliable launch path." It isn't, for a checkout under active development. Diagnosed live 2026-08-06 after a Cherry Studio session came back with only 9 of 12 tools:
+
+| launch path | tools served |
+|---|---:|
+| source, in-process | 12 |
+| freshly built wheel, clean venv | 12 |
+| **`.venv/bin/poke-tools-mcp`** | **12** ✅ |
+| `uvx --python 3.12 --from <repo>` | **9** ❌ |
+
+`uvx` served a `server.py` of **16,203 bytes** from `~/.cache/uv/archive-v0/`, against a repo source of 25,738 — `has team_check: False`. The stale archive survived **both** `--refresh` **and** `uv cache clean poke-tools` (a name-based clean doesn't reach an archive built from a path source). No `uv tool` install existed and there is no `poke-tools` on PyPI, so nothing was shadowing it.
+
+The cause is that `uvx` is designed for *published* tools. Against a live checkout it lags every change, and this package's version has been `0.1.0` since Phase 0, so nothing ever signals a rebuild.
+
+**Correct entry** — no arguments, and no `--python 3.12` workaround needed since the venv is already 3.12:
+
+```
+command: <repo>/.venv/bin/poke-tools-mcp
+env:     POKE_TOOLS_DB=<repo>/data/pokedex.sqlite
+```
+
+It's an editable install, so it imports straight from `src/` and every future change appears immediately. The `uvx` path may be right again if this is ever published as a package; it is wrong for a working repo.
+
+**Why Phase 0's check passed anyway:** it genuinely worked — there simply wasn't a second build yet for the cache to be stale against. A verification that passes for a reason unrelated to what it claims to check is the recurring failure of this project; see `.claude/state/progress.md`.
 
 #### 0.6.5 Re-confirmed unchanged
 
@@ -319,7 +347,8 @@ resolve page (prefixsearch, handles /Generation IV learnset subpages)
 ### 1.4 Cherry Studio wiring
 
 - Register at `Settings → MCP → Add`, stdio transport.
-- Cherry Studio ships its own bundled `uv`/`bun` at `~/.cherrystudio/bin` and **will not reuse a system install** — so `uvx` is the reliable launch path. If pointing at a venv instead, use an **absolute, space-free** interpreter path: there's a known bug where env-var paths containing spaces fail even when quoted.
+- Cherry Studio ships its own bundled `uv`/`bun` at `~/.cherrystudio/bin` and **will not reuse a system install** — confirmed still true on v2.0.0. Use an **absolute, space-free** path: there's a known bug where env-var paths containing spaces fail even when quoted.
+- ⚠️ **`uvx` is the WRONG launch path for a development checkout — see §0.6.7.** This bullet originally recommended it; that was reasoning about *finding* `uv`, not about caching, and it silently serves stale code. Point at the venv console script instead.
 - The app process does not inherit your login shell's PATH. Declare every needed env var in the MCP entry itself, not `.zshrc`.
 - Config persists to **SQLite**, not a hand-editable JSON file. `~/Library/Application Support/CherryStudio`. There's a JSON *import* dialog but its schema is undocumented — treat it as paste-in only.
 - Bind **only this server** to the agent (`Edit → MCP`). Cherry Studio's own docs warn that unbound-but-enabled servers eat context.

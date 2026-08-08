@@ -369,7 +369,109 @@ def test_an_illegal_moveset_is_rendered_without_complaint(conn: sqlite3.Connecti
     )
     (block,) = _parse_showdown(export.text)
     assert block["moves"] == ["Draco Meteor", "Flamethrower"]
-    assert any("does not check anything" in note.lower() for note in export.notes)
+    # The disclaimer was reworded in Phase 5 — "does not check anything" became
+    # false once the level-vs-learn-level observation landed, and a note that
+    # over-claims its own silence is the same defect as one that over-claims its
+    # coverage. What must survive is the division of labour: this tool formats,
+    # team_check judges.
+    assert any("does not validate" in note.lower() for note in export.notes)
+    assert any("team_check" in note for note in export.notes), (
+        "the disclaimer has to name the tool that does judge legality, or a reader "
+        "is told what this tool will not do and not where to get it done"
+    )
+    assert not any("draco meteor" in note.lower() for note in export.notes), (
+        "an illegal move must not raise an observation here — two tools with two "
+        "legality opinions is worse than one tool with none"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 3b. The level-vs-learn-level observation — and, mostly, its silence
+#
+# The Phase 4 gate produced a team whose export listed Megahorn on a level 48
+# Heracross while Megahorn is learned at 55. The model caught it in prose and the
+# exported block did not reflect it, which is the one seam between "formatter" and
+# "the thing a player pastes into a calculator". `export_team` now observes on it.
+#
+# **The observation is one test; its silence is five.** An advisory that fires on
+# a TM move, an egg move, a member with no level, or an already-high-enough level
+# is not a caveat, it is noise — and noise in a note field is worse than an absent
+# note, because a reader learns to skip the field. Every silence below is a case
+# implementer verified by hand; verifying by hand is how they stay verified for
+# one afternoon.
+# ---------------------------------------------------------------------------
+
+
+def _level_notes(export) -> list[str]:
+    """Notes about a *specific* member being below a move's learn level.
+
+    Deliberately not matched on "below the level that teaches": the standing
+    disclaimer describes the observation in those very words, so that filter
+    counted the disclaimer as an instance and made every silence case red. A
+    filter that matches the sentence explaining the feature rather than the
+    feature is exactly the shape of guard this suite keeps having to fix.
+    """
+    return [note for note in export.notes if "is listed at level" in note.lower()]
+
+
+def test_a_move_listed_below_its_only_learn_level_is_observed(conn: sqlite3.Connection) -> None:
+    """The Phase 4 gate's Heracross, exported as given and flagged as not-yet."""
+    export = export_team(
+        [{"pokemon": "heracross", "moves": ["megahorn"], "level": 48}],
+        "heartgold-soulsilver",
+        conn=conn,
+    )
+    (note,) = _level_notes(export)
+    assert "heracross" in note.lower()
+    assert "megahorn" in note.lower()
+    assert "55" in note, "the note has to name the level that teaches it, or it is unactionable"
+
+    (block,) = _parse_showdown(export.text)
+    assert block["moves"] == ["Megahorn"], (
+        "the observation must not change the rendered text — the whole contract is that "
+        "this tool exports what it was given"
+    )
+    assert block["level"] == 48
+
+
+@pytest.mark.parametrize(
+    ("member", "why_silent"),
+    [
+        (
+            {"pokemon": "typhlosion", "moves": ["earthquake"], "level": 5},
+            "Earthquake is TM26 in HGSS, so level is irrelevant to obtaining it",
+        ),
+        (
+            {"pokemon": "typhlosion", "moves": ["extrasensory"], "level": 5},
+            "Extrasensory is an egg move on the Cyndaquil line, available from level 1",
+        ),
+        (
+            {"pokemon": "heracross", "moves": ["megahorn"], "level": 60},
+            "level 60 is past the level 55 that teaches it — nothing to say",
+        ),
+        (
+            {"pokemon": "heracross", "moves": ["megahorn"]},
+            "no Level: line, so there is no comparison to make and none may be invented",
+        ),
+        (
+            {"pokemon": "typhlosion", "moves": ["draco-meteor"], "level": 5},
+            "an illegal move is team_check's to judge; this tool does not acquire a "
+            "second legality opinion by the back door",
+        ),
+    ],
+    ids=["tm-move", "egg-move", "level-is-high-enough", "no-level-given", "illegal-move"],
+)
+def test_the_level_observation_stays_silent_when_it_has_nothing_to_say(
+    conn: sqlite3.Connection, member: dict[str, object], why_silent: str
+) -> None:
+    """*** The complement, and the half that decides whether this is signal. ***
+
+    A caveat that appears on every export is read as boilerplate within a day, and
+    then the one that matters is skipped with the rest. Each case below is a route
+    to the move that makes level a non-question.
+    """
+    export = export_team([member], "heartgold-soulsilver", conn=conn)
+    assert not _level_notes(export), f"fired when it should not have: {why_silent}"
 
 
 def test_the_notes_carry_no_exact_duplicates(conn: sqlite3.Connection) -> None:

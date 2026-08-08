@@ -23,8 +23,11 @@ format — and reported either way; see :func:`_rescue_wiki_cache`.
 Exit codes:
 
 ==== ==========================================================================
-0    Build (or ``--refresh``) succeeded and everything checked out.
-1    The build failed; the previous database, if any, is untouched.
+0    Build succeeded, or ``--refresh`` *verified* every source unchanged.
+1    The build failed and the previous database, if any, is untouched — or
+     ``--refresh`` could not make the comparison at all (no database, no
+     network, or upstream sent no ETags to compare against). Never returned for
+     a comparison that succeeded, in either direction.
 3    ``--refresh`` only: upstream moved. Re-run the build.
 4    The database was written, but the launch-game counts do not match the
      PLAN.md §0.2 expectations. Distinct from 1 because a build that merely
@@ -438,9 +441,21 @@ def refresh(db_path: Path) -> int:
     veekun CSVs, so checking only the CSVs would report "Up to date" while the
     cross-check input had changed underneath.
 
-    Phase 5 owns full refresh semantics (PLAN.md §2). This is the honest
-    comparison it will be built on: it says whether anything moved and names
-    what, but it does not rebuild.
+    This satisfies PLAN.md §2 phase 5's ``--refresh`` half. It says whether
+    anything moved and names what; it deliberately does not rebuild, so a caller
+    decides what to do about drift.
+
+    **Each exit code means exactly one thing, and "I could not tell" is not
+    folded into any of them.** ``0`` is *verified unchanged*, :data:`EXIT_DRIFT`
+    is *verified changed*, and ``1`` covers every state in which the comparison
+    did not actually happen — no database, unreadable provenance, the network
+    down, or upstream declining to send ETags at all. That last case is the one
+    worth naming: the comparison is ``stamped != current``, and if upstream ever
+    stopped sending ``ETag`` headers every side of it would be ``None``, every
+    file would compare equal, and this would print "Up to date" having verified
+    nothing whatsoever. That is the shape of failure ``.claude/state/progress.md``
+    calls "guards that structurally cannot fail", so a null current ETag is
+    treated as *unverifiable* rather than as a match.
     """
     if not db_path.is_file():
         print(f"No database at {db_path}; nothing to refresh against.", file=sys.stderr)
@@ -474,20 +489,54 @@ def refresh(db_path: Path) -> int:
 
     current = pokeapi_csv.upstream_etags()
     current[showdown.SHOWDOWN_FILENAME] = pokeapi_csv.head_etag(showdown.SHOWDOWN_LEARNSETS_URL)
-    changed = sorted(name for name, etag in current.items() if stamped.get(name) != etag)
+
+    # Split three ways rather than two. A source upstream reports without an
+    # ETag cannot be compared at all, and calling that "unchanged" is the one
+    # answer this command must never give — see the docstring.
+    unverifiable = sorted(name for name, etag in current.items() if etag is None)
+    changed = sorted(
+        name for name, etag in current.items() if etag is not None and stamped.get(name) != etag
+    )
     missing = sorted(set(stamped) - set(current))
 
-    if not changed and not missing:
-        print("Up to date: every upstream source matches the stamped ETag.", file=sys.stderr)
-        return 0
+    if unverifiable:
+        print(
+            f"\nCANNOT VERIFY — {len(unverifiable)} of {len(current)} source(s) sent no "
+            "ETag header, so this run compared nothing for them:",
+            file=sys.stderr,
+        )
+        for name in unverifiable[:10]:
+            print(f"  {name}", file=sys.stderr)
+        if len(unverifiable) > 10:
+            print(f"  ... and {len(unverifiable) - 10} more", file=sys.stderr)
 
-    print(f"\nDRIFT DETECTED — {len(changed)} file(s) changed upstream:", file=sys.stderr)
-    for name in changed:
-        print(f"  {name}", file=sys.stderr)
-    for name in missing:
-        print(f"  {name} (no longer reported upstream)", file=sys.stderr)
-    print("\nRe-run `poke-tools-build` to pick the changes up.", file=sys.stderr)
-    return EXIT_DRIFT
+    if changed or missing:
+        print(
+            f"\nDRIFT DETECTED — {len(changed)} file(s) changed upstream"
+            + (f", {len(missing)} no longer reported" if missing else "")
+            + ":",
+            file=sys.stderr,
+        )
+        for name in changed:
+            print(f"  {name}", file=sys.stderr)
+        for name in missing:
+            print(f"  {name} (no longer reported upstream)", file=sys.stderr)
+        print("\nRe-run `poke-tools-build` to pick the changes up.", file=sys.stderr)
+        # Drift outranks an unverifiable source: a rebuild is needed either way,
+        # and it is the more actionable of the two answers.
+        return EXIT_DRIFT
+
+    if unverifiable:
+        print(
+            "\nEverything that could be compared matches, but the above could not be, "
+            "so this is not a clean bill of health. Re-run, or rebuild with "
+            "`poke-tools-build --force-download` to compare content hashes instead.",
+            file=sys.stderr,
+        )
+        return 1
+
+    print("Up to date: every upstream source matches the stamped ETag.", file=sys.stderr)
+    return 0
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -499,8 +548,9 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         ),
         epilog=(
             "exit codes:\n"
-            "  0  success\n"
-            "  1  the build failed; any previous database is untouched\n"
+            "  0  success, or --refresh verified every source unchanged\n"
+            "  1  the build failed and any previous database is untouched; or\n"
+            "     --refresh could not make the comparison at all\n"
             f"  {EXIT_DRIFT}  --refresh only: upstream moved, re-run the build\n"
             f"  {EXIT_COUNT_MISMATCH}  the database was written, but its launch-game counts do "
             "not match\n     the PLAN.md 0.2 expectations\n"
@@ -547,7 +597,8 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         help=(
             "Do not build. Compare upstream ETags against the ones stamped into the "
             f"existing database and report drift. Exits {EXIT_DRIFT} if anything "
-            "changed, 0 if up to date."
+            "changed, 0 if verified up to date, 1 if the comparison could not be "
+            "made (no database, network down, or upstream sent no ETags)."
         ),
     )
     return parser.parse_args(argv)
@@ -561,6 +612,13 @@ def main(argv: list[str] | None = None) -> int:
     db_path = (args.db or location.path).expanduser()
     cache_dir = (args.cache_dir or _default_cache_dir(db_path)).expanduser()
 
+    # `--refresh` does not build anything, so a network failure during one must
+    # not report itself as "Build failed" — the operator's next move is different
+    # (re-run later vs. investigate a half-finished build), and the previous
+    # message sent them looking for damage that cannot exist: refresh opens the
+    # database read-only and writes nothing at all.
+    action = "Refresh" if args.refresh else "Build"
+
     try:
         if args.refresh:
             return refresh(db_path)
@@ -572,17 +630,17 @@ def main(argv: list[str] | None = None) -> int:
             carry_wiki_cache=not args.no_cache_carryover,
         )
     except IngestError as exc:
-        print(f"\nBuild failed: {exc}", file=sys.stderr)
+        print(f"\n{action} failed: {exc}", file=sys.stderr)
         return 1
     except OSError as exc:
         # Filesystem work happens outside the ingest modules' own error handling:
         # `db_path.parent.mkdir`, `tmp_path.unlink`, and the final `os.replace`.
         # An unwritable or non-directory `--db` path (`/dev/null/nope/x.sqlite`)
         # otherwise reaches the operator as a bare NotADirectoryError traceback.
-        print(f"\nBuild failed (filesystem): {exc}", file=sys.stderr)
+        print(f"\n{action} failed (filesystem): {exc}", file=sys.stderr)
         return 1
     except sqlite3.Error as exc:
-        print(f"\nBuild failed (SQLite): {exc}", file=sys.stderr)
+        print(f"\n{action} failed (SQLite): {exc}", file=sys.stderr)
         return 1
 
 

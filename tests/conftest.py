@@ -9,12 +9,74 @@ means "you have not run the build yet" trains people to ignore red suites.
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from collections.abc import Iterator
 
 import pytest
 
 from poke_tools.db import resolve_db_path
+
+# ---------------------------------------------------------------------------
+# A run in which NOTHING ran is not a passing run
+#
+# `POKE_TOOLS_DB=/nonexistent uv run pytest` reported `121 skipped, exit 0` from
+# Phase 1 until Phase 5. Every skip was individually correct and individually
+# well-reasoned — the fixture above deliberately skips with an actionable message
+# so a fresh clone does not go red — but the *aggregate* was a green suite that
+# had verified nothing, and green is what CI, a reviewer and an agent all read as
+# "checked". The mutation harness in `tests/mutation/` hit exactly this: its first
+# run came back all-green because every test had skipped, resolving the pokédex
+# relative to the wrong tree.
+#
+# So the guard is a floor on tests that actually RAN, not a ban on skipping:
+# skipping one test, or a hundred, stays fine. Skipping every single one of them
+# does not.
+# ---------------------------------------------------------------------------
+
+#: Escape hatch for the deliberate all-skip case — the mutation harness's own
+#: self-refusal test runs a subprocess suite it *expects* to fully skip. Set it
+#: only where an empty run is the thing under test, never to quiet a red suite.
+ALLOW_EMPTY_RUN_ENV = "POKE_TOOLS_ALLOW_EMPTY_RUN"
+
+_OUTCOMES = {"ran": 0}
+
+
+def pytest_runtest_logreport(report: pytest.TestReport) -> None:
+    """Count tests that produced a real verdict, pass or fail."""
+    if report.when == "call" and report.outcome in {"passed", "failed"}:
+        _OUTCOMES["ran"] += 1
+    elif report.when == "setup" and report.outcome == "failed":
+        # An erroring fixture is a verdict too — it is emphatically not silence.
+        _OUTCOMES["ran"] += 1
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
+    """Turn a wholly-skipped session into a failure with an actionable reason."""
+    if exitstatus != 0 or os.environ.get(ALLOW_EMPTY_RUN_ENV):
+        return
+    if session.testscollected == 0:
+        # An empty *selection* (`-k nothing-matches`) is pytest's own business and
+        # it already reports it. This guard is about collected-then-skipped.
+        return
+    if _OUTCOMES["ran"]:
+        return
+
+    session.exitstatus = pytest.ExitCode.TESTS_FAILED
+    location = resolve_db_path()
+    reporter = session.config.pluginmanager.get_plugin("terminalreporter")
+    message = (
+        f"ALL {session.testscollected} COLLECTED TESTS SKIPPED — failing the run.\n"
+        "Nothing was verified, so a zero exit code would mean 'checked' when it means "
+        "'did not look'.\n"
+        f"The pokédex resolved to {location.path} (via {location.source}) and "
+        f"exists={location.exists}.\n"
+        "Run `uv run poke-tools-build`, or point POKE_TOOLS_DB at a built database.\n"
+        f"If an empty run is genuinely what you are testing, set {ALLOW_EMPTY_RUN_ENV}=1."
+    )
+    if reporter is not None:  # pragma: no branch - always present under `pytest`
+        reporter.write_sep("=", "empty run", red=True)
+        reporter.write_line(message)
 
 
 @pytest.fixture(scope="session")

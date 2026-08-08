@@ -16,6 +16,7 @@ would test neither.
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -394,6 +395,177 @@ def test_section_and_content_rows_never_expire_because_the_revid_is_in_the_key(
         conn.close()
     assert expires is None
     assert cache.get("sections:Leftovers:4590204") is None, "a different revision must miss"
+
+
+def test_the_revision_probe_ttl_bounds_how_stale_a_wiki_eval_can_be() -> None:
+    """*** The probe TTL is the drift-detection blind spot, so it is a bounded number. ***
+
+    The two tests above pin the *mechanism* — content is keyed on revid and never
+    expires, which is what makes caching it indefinitely safe. This pins the
+    **consequence**, which is a different fact and the one that reaches a reader
+    of a green test run: a warm cache makes zero wire requests, so for as long as
+    the probe row lives, the wiki eval cases (PLAN.md §5's Leftovers and Move
+    Tutor cases, the only things watching for Bulbapedia template drift) pass
+    against a cached revision without ever asking whether the page has changed.
+    Detection is *late*, not absent — bounded by exactly this constant.
+
+    Thirty days is a deliberate trade against ``Crawl-delay: 5`` and PLAN.md
+    §3.3's self-throttling, and it may be shortened freely. Lengthening it widens
+    the window in which "the wiki evals are green" stops being evidence about
+    upstream, and that is a decision rather than a tuning change — which is why
+    this asserts a ceiling rather than the current value.
+
+    Documented in ``docs/DATA_SOURCES.md`` §5 alongside the surgical lever:
+    ``DELETE FROM wiki_cache WHERE kind = 'page'`` re-probes every page for one
+    request each and keeps every ``sections`` and ``content`` row whose revision
+    is unchanged.
+    """
+    assert 0 < REVISION_TTL_DAYS <= 30, (
+        f"REVISION_TTL_DAYS is {REVISION_TTL_DAYS}. That is how many days a wiki eval "
+        "can pass against a cached revision while saying nothing about whether the live "
+        "page still parses — the suite's only watch on Bulbapedia template drift. "
+        "Shortening it is free; lengthening it trades detection latency for politeness "
+        "and belongs in docs/DATA_SOURCES.md §5, not in a constant."
+    )
+
+
+#: Markers identifying the two ``docs/DATA_SOURCES.md`` subsections that quote the
+#: probe TTL as a figure. Matched as substrings of an ``###`` heading, and a marker
+#: that matches nothing is a failure rather than an empty scan — a doc-coupling
+#: test that silently finds nothing to check is the inert guard this project keeps
+#: rediscovering.
+#:
+#: **Deliberately number-free.** The blind-spot heading contains the figure itself
+#: ("The 30-day blind spot"), which is the single most forgettable place for it to
+#: go stale — so it must be *inside* the scan, and matching the heading on its full
+#: text would mean a correct docs-side update to 7 broke the heading lookup instead
+#: of passing. The marker names the subsection; the scan reads its number.
+_TTL_DOC_HEADINGS = ("The wiki cache", "blind spot")
+
+_DOCS_PATH = Path(__file__).resolve().parents[1] / "docs" / "DATA_SOURCES.md"
+
+
+def _ttl_doc_span(text: str | None = None) -> str:
+    """The prose from the first TTL subsection through the end of the second.
+
+    Takes the document as a string so the complement test below can run the scan
+    against a *synthetic* doc whose figure disagrees with the constant. The
+    docs-edited-behind-the-code direction was verified by hand once; a hand
+    verification is worth exactly one afternoon, which is the entire reason
+    ``tests/mutation/`` exists.
+    """
+    lines = (_DOCS_PATH.read_text(encoding="utf-8") if text is None else text).splitlines()
+    starts = []
+    for marker in _TTL_DOC_HEADINGS:
+        index = next(
+            (i for i, line in enumerate(lines) if line.startswith("### ") and marker in line),
+            None,
+        )
+        assert index is not None, (
+            f"docs/DATA_SOURCES.md has no `###` subsection containing {marker!r}. If it was "
+            "renamed, update _TTL_DOC_HEADINGS — this test cannot check prose it cannot find, "
+            "and an empty scan would pass."
+        )
+        starts.append(index)
+
+    end = next(
+        (
+            i
+            for i, line in enumerate(lines[max(starts) + 1 :], max(starts) + 1)
+            if line[:4] == "### "
+        ),
+        len(lines),
+    )
+    return "\n".join(lines[min(starts) : end])
+
+
+def _day_figures(span: str) -> set[int]:
+    """Every ``N-day`` / ``N days`` figure quoted in *span*."""
+    return {int(match) for match in re.findall(r"\b(\d+)[\s-]days?\b", span)}
+
+
+def test_the_docs_day_figures_match_the_constant_they_describe() -> None:
+    """*** The docs quote the TTL as a number in three places; shortening it breaks them. ***
+
+    ``test_the_revision_probe_ttl_bounds_how_stale_a_wiki_eval_can_be`` deliberately
+    asserts a ceiling, so shortening ``REVISION_TTL_DAYS`` to 7 is free and stays
+    green — while ``docs/DATA_SOURCES.md`` goes on saying "30-day blind spot",
+    "up to 30 days" and "the 30 above is its current value". Green code, confident
+    wrong prose, no signal: this project's signature failure at documentation
+    scale, and the docs currently defend against it with a sentence asking the
+    next person to remember.
+
+    This makes the remembering structural. Every ``N-day``/``N days`` figure in the
+    two subsections that discuss the TTL must be the constant's real value.
+
+    Scoped to those two subsections on purpose. Section 5 also covers refresh
+    cadence, and a legitimate "a 7-day habit" sentence there is not a claim about
+    this constant — a whole-document scan would fail on prose that is perfectly
+    correct, which is how a coupling test gets deleted instead of fixed.
+    """
+    span = _ttl_doc_span()
+    figures = _day_figures(span)
+
+    assert figures, (
+        "the TTL subsections quote no day figure at all, so this test is checking "
+        "nothing — either the prose stopped naming the number or the scan is wrong"
+    )
+    assert figures == {REVISION_TTL_DAYS}, (
+        f"docs/DATA_SOURCES.md's TTL subsections quote {sorted(figures)} day(s) while "
+        f"REVISION_TTL_DAYS is {REVISION_TTL_DAYS}. Shortening the constant is free and "
+        "the ceiling test above stays green by design, so the docs are the thing that "
+        "goes silently wrong — including the subsection heading, which carries the "
+        "number too."
+    )
+    assert "REVISION_TTL_DAYS" in span, (
+        "the prose has to name the constant somewhere in these subsections, or a reader "
+        "who finds a number has no way to check it against the code"
+    )
+
+
+def test_the_docs_coupling_catches_a_docs_only_edit_too() -> None:
+    """*** The complement, in the direction a docs-only change would take. ***
+
+    ``tests/mutation/``'s ``probe-ttl-shortened-behind-the-docs`` covers one half:
+    the constant moves, the prose does not. It cannot cover the other half, because
+    the harness rebinds module attributes and a documentation edit is a file. So
+    that direction is asserted here against a synthetic document instead — a real
+    edit-and-restore would leave the working tree dirty if the run died mid-test,
+    which is a bad trade for a check this cheap.
+
+    The scan is exercised end to end (headings located, span sliced, figures
+    extracted), so this fails if the heading match, the slice, or the regex breaks
+    — not merely if the comparison does.
+    """
+    synthetic = "\n".join(
+        [
+            "## 5. Caching and staleness",
+            "",
+            "### The wiki cache",
+            "",
+            "| `page` | `page:<title>` | **45 days** (`REVISION_TTL_DAYS`) |",
+            "",
+            "### The 45-day blind spot, and how to bust it",
+            "",
+            "For up to 45 days after an edit the cached revid is never re-checked.",
+            "",
+            "### Checking whether upstream moved",
+            "",
+            "Unrelated prose mentioning a 7-day habit, outside the scanned span.",
+        ]
+    )
+    figures = _day_figures(_ttl_doc_span(synthetic))
+
+    assert figures == {45}, f"the scan read {sorted(figures)} from the synthetic document"
+    assert figures != {REVISION_TTL_DAYS}, (
+        "a docs figure edited away from the constant must not compare equal — this is "
+        "the assertion the real test makes, shown here to actually separate the two"
+    )
+    assert 7 not in figures, (
+        "the scan reached past the second subsection into unrelated prose. Scoping is "
+        "the reason this coupling is safe to have at all: a test that fails on correct "
+        "prose elsewhere in section 5 gets deleted rather than fixed"
+    )
 
 
 def test_a_missing_database_disables_the_cache_rather_than_failing(tmp_path: Path) -> None:

@@ -251,13 +251,47 @@ def _values_match(actual: Any, expected: Any) -> bool:
     return actual == expected
 
 
+#: Sentinel for "this key is not in the payload at all", kept distinct from
+#: ``None`` so :func:`_field_value` can tell absence from an explicit null.
+_ABSENT = object()
+
+
+def _matches_expectation(actual: Any, expected: Any) -> bool:
+    """Compare one field against an expectation, treating absence as ``null``.
+
+    **The one asymmetry in this file, and it is deliberate.** Some models drop
+    ``None``-valued fields from their serialisation to save wire bytes — a
+    ``@model_serializer`` keyed on ``value is not None``, which
+    :class:`~poke_tools.models.MoveLegality` and
+    :class:`~poke_tools.models.WikiRow` both use. Under that, a case written as
+    ``{move: psychic, tm: null}`` is asserting a fact that is still exactly true —
+    no TM teaches Psyduck Psychic — about a key that is no longer present. Making
+    the author write two different YAML spellings depending on which model they
+    happen to be asserting against would put the encoding of the wire format into
+    every case, and get one of them wrong.
+
+    So ``null`` matches an explicit ``None`` **or** an absent key.
+
+    ``false`` does **not**. That direction stays strict, because it is the whole
+    §3.9 trap: ``available_in_game`` is three-valued and ``null`` means "upstream
+    records nothing", never "no". If absence satisfied ``false``, a model that
+    started dropping ``None`` would silently turn every "unknown" into a "denied"
+    and the suite would go green on it. Absence means null; null is not false.
+    """
+    if expected is None:
+        return actual is _ABSENT or actual is None
+    if actual is _ABSENT:
+        return False
+    return _values_match(actual, expected)
+
+
 def _row_matches(row: Any, expected: dict[str, Any]) -> bool:
     """True when ``row`` contains every key/value in ``expected`` (subset match)."""
     actual = _as_dict(row) if not isinstance(row, dict) else row
     if not actual:
         return False
     return all(
-        key in actual and _values_match(actual[key], value) for key, value in expected.items()
+        _matches_expectation(actual.get(key, _ABSENT), value) for key, value in expected.items()
     )
 
 
@@ -382,8 +416,12 @@ def _check_fields(case: EvalCase, result: Any, context: str) -> None:
     payload = _as_dict(result)
     assert payload, f"result of type {type(result).__name__} has no field mapping{context}"
     for name, expected in case.expect["fields"].items():
-        assert name in payload, f"result has no field {name!r}{context}"
-        actual = payload[name]
+        # Same absence-is-null rule `_matches_expectation` documents at length: a
+        # model that drops its None fields still answers `null` for them, and only
+        # for them. A missing key under any *other* expectation is a real failure
+        # and keeps the message it always had.
+        assert name in payload or expected is None, f"result has no field {name!r}{context}"
+        actual = payload.get(name)
         if isinstance(expected, bool) or isinstance(actual, bool) or expected is None:
             # Identity, not equality. `available_in_game` is three-valued —
             # True / False / None, where None means "upstream records nothing,

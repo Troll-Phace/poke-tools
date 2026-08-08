@@ -50,9 +50,47 @@ _MACHINE_CATEGORY = "all-machines"
 _ACQUISITION_NOTE = (
     "Where to obtain this item is not in this server's data beyond `held_by`: PokéAPI "
     "records which wild Pokémon carry an item, and nothing else — no route, no shop, no "
-    "NPC, no field of any kind (PLAN.md §0.2). Bulbapedia answers it, and that tier is "
-    "Phase 3 and not built yet. Do not infer a location from the fields above."
+    "NPC, no field of any kind (PLAN.md §0.2). Call `wiki_lookup` with this item's page "
+    "and the 'Acquisition' section to answer it from Bulbapedia. Do not infer a location "
+    "from the fields above."
 )
+
+#: Verified era-correct in-game names, keyed on ``(identifier, game)``.
+#:
+#: ``items`` and ``item_names`` carry the **present-day** name only, with no
+#: historical column anywhere in the CSV set — the same shape of gap
+#: ``move_changelog`` fills for moves (PLAN.md §0.6.2) and that nothing fills for
+#: items. So a card can say ``Leek`` for a game whose bag says ``Stick``.
+#:
+#: **This map is deliberately tiny and deliberately not a fix.** Two things argue
+#: against generating a complete one. First, there is no structured source: the
+#: long tail is casing and spacing drift (``NeverMeltIce``, ``BrightPowder``,
+#: ``TwistedSpoon``, ``Parlyz Heal``) that would have to be transcribed by hand
+#: from prose, and a hand-written table that covers thirty of them reads as
+#: covering all of them — PLAN.md §3.9's silent-gap-filling failure with better
+#: manners. Second, this was tried from memory while scoping the fix and got one
+#: of its two entries wrong: HeartGold/SoulSilver do **not** call the Dowsing
+#: Machine the Itemfinder, they call it the Dowsing MCHN, and the rename happened
+#: at Generation IV rather than V. Both entries below are quoted from Bulbapedia
+#: leads instead:
+#:
+#: * *Leek* — "known as the **Stick** prior to Pokémon Sword and Shield".
+#: * *Dowsing Machine* — "referred to as the **Itemfinder** prior to Generation IV
+#:   and as the **Dowsing MCHN** in HeartGold and SoulSilver and the Generation V
+#:   games". Note this is why the key is per-game and not per-generation: the two
+#:   launch games disagree with each other on this one item.
+#:
+#: The general case is disclosed on ``ItemCard.name``'s field description, which
+#: reaches the model through the output schema at no per-response byte cost.
+#: ``name`` itself is left alone on purpose — ``export_team`` builds its Showdown
+#: paste from it, and Showdown uses ``Leek`` across every generation, so
+#: rewriting it here would break an import that currently works.
+_ERA_ITEM_NAMES: dict[tuple[str, str], str] = {
+    ("stick", "emerald"): "Stick",
+    ("stick", "heartgold-soulsilver"): "Stick",
+    ("dowsing-machine", "emerald"): "Itemfinder",
+    ("dowsing-machine", "heartgold-soulsilver"): "Dowsing MCHN",
+}
 
 
 def _item_rows(conn: sqlite3.Connection, item: str) -> list[sqlite3.Row]:
@@ -225,6 +263,15 @@ def get_item(
     if availability_note:
         notes.append(availability_note)
 
+    display_name = row["name"] or row["identifier"]
+    era_name = _ERA_ITEM_NAMES.get((row["identifier"], scope.game))
+    if era_name and era_name != display_name:
+        notes.append(
+            f"{scope.game} prints this item's name as {era_name!r}; {display_name!r} is the "
+            "modern name and is what `name` holds, because that is the spelling a Showdown "
+            "paste needs. Tell a player to look for the in-game spelling."
+        )
+
     if len(rows) > 1:
         # Surfaced rather than resolved silently: the duplicate rows disagree
         # about price, and reporting 80 for a berry upstream also records at 200
@@ -270,7 +317,7 @@ def get_item(
     return ItemCard(
         source="pokeapi",
         item=row["identifier"],
-        name=row["name"] or row["identifier"],
+        name=display_name,
         game=scope.game,
         available_in_game=available_in_game,
         category=row["category"],

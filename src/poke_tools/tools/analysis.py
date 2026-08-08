@@ -340,10 +340,20 @@ _STATUS_ONLY_NOTE = (
 )
 
 #: Abilities that make their holder outright immune to an attacking type, and the
-#: type each one blocks. Immunities only: an ability that *reduces* damage (Thick
-#: Fat, Heatproof, Filter, Solid Rock, Wonder Guard) is not modelled, and
+#: type each one blocks. Immunities only: an ability that merely *scales* damage
+#: is not modelled in either direction — not the reducers (Thick Fat, Heatproof,
+#: Filter, Solid Rock, Wonder Guard) and not the amplifiers — and
 #: :data:`_TYPE_PRESSURE_ABILITY_NOTE` says so rather than leaving the reader to
 #: assume the chart is complete.
+#:
+#: **``dry-skin`` is the entry that proves the distinction matters.** It is here
+#: for a real Water immunity, but in Generation 4 it *also* takes 1.25× from Fire,
+#: and that half is not represented: a Dry Skin member is counted as ordinarily
+#: Fire-weak (or not Fire-weak at all, on a resistant typing) rather than extra
+#: weak. The error is always an under-claim — the shared-weakness pass can miss a
+#: member it should have listed, never list one it should not — but "this ability
+#: is in the table" must not be read as "this ability is fully modelled", which is
+#: exactly what a reader would otherwise conclude from seeing it here.
 #:
 #: Deliberately absent: **Lightning Rod and Storm Drain**, which are the trap here.
 #: Both grant an Electric/Water immunity in Generation 5 and later, but in the two
@@ -365,9 +375,12 @@ _ABILITY_TYPE_IMMUNITIES: dict[str, str] = {
 _TYPE_PRESSURE_ABILITY_NOTE = (
     "Shared weaknesses come from typing plus whichever abilities could be resolved: one you "
     "supplied that is legal here, or a species' only ability in this game. A member whose "
-    "ability is ambiguous is counted on typing alone, and damage-reducing abilities (Thick "
-    "Fat, Heatproof, Filter, Solid Rock, Wonder Guard) are not modelled — so an empty "
-    "`resist_members` means none was found, not that none exists."
+    "ability is ambiguous is counted on typing alone. Only outright immunities are modelled: "
+    "abilities that merely scale damage are not, neither the reducers (Thick Fat, Heatproof, "
+    "Filter, Solid Rock, Wonder Guard) nor the amplifiers (Dry Skin, which blocks Water but "
+    "also takes 1.25x from Fire — only its Water half is applied here). So an empty "
+    "`resist_members` means none was found rather than that none exists, and a member absent "
+    "from `weak_members` is weak-by-typing only rather than confirmed safe."
 )
 
 
@@ -1016,10 +1029,59 @@ _SHOWDOWN_SPECIES_NAMES: dict[str, str] = {
 }
 
 _EXPORT_DISCLAIMER = (
-    "export_team formats; it does not check anything. Moveset legality, item availability "
-    "and ability legality are team_check's job — this text is a faithful rendering of what "
-    "was passed in, legal or not."
+    "export_team formats; it does not validate. Moveset legality, item availability and "
+    "ability legality are team_check's job — this text is a faithful rendering of what was "
+    "passed in, legal or not. The one exception is noted below where it applies: a "
+    "level-up-only move on a member whose stated level is too low to have learned it yet."
 )
+# Worded to share no phrase with the per-member observation `_below_learn_level`
+# produces. The first draft ended "...below the level that teaches it", which is
+# verbatim what the observation says, so this standing sentence answered a search
+# for the observation on *every* export — including the ones where the tool
+# correctly stayed silent. A caller filtering `notes` for the finding would have
+# seen it fire always. Keep the two vocabularies disjoint: this one says "stated
+# level", the observation says "is listed at level".
+
+
+def _below_learn_level(
+    conn: sqlite3.Connection,
+    member: TeamMember,
+    scope: GameScope,
+    display: dict[str, str],
+) -> list[str]:
+    """Moves this member cannot have *yet* at the ``Level:`` line it was given.
+
+    The Phase 4 gate produced a Lv 48 Heracross carrying Megahorn, which is
+    learned at Lv 55. The model spotted the tension in prose, but the exported
+    block did not reflect it — and the block is the artifact that gets pasted
+    into a damage calculator, so it is the one that ought to say so.
+
+    **Only level-up-exclusive moves count.** A move also reachable by TM, tutor
+    or breeding is obtainable at any level, so flagging it would be noise: an egg
+    move is on the Pokémon from level 1, and a TM can be used the moment the
+    player owns it. Emitting a warning for those would train a reader to ignore
+    the ones that are real.
+
+    The verdicts come from ``can_learn`` rather than from a query written here,
+    for the same reason ``team_check`` embeds them unmodified: ``can_learn`` is
+    PLAN.md §0.4's hallucination guard, and a second opinion about what a species
+    learns and when is a second opinion that can disagree with it.
+
+    Observation only — the returned paste text is unchanged either way. A team is
+    a plan as often as it is a record, and refusing to format "Heracross at 48,
+    Megahorn at 55" would refuse to write down a perfectly sensible plan.
+    """
+    if member.level is None or not member.moves:
+        return []
+    report = can_learn(member.pokemon, member.moves, scope.game, conn=conn)
+    return [
+        f"{display.get(verdict.move, verdict.move)} (level-up at {verdict.level})"
+        for verdict in report.moves
+        if verdict.legal
+        and verdict.level is not None
+        and verdict.level > member.level
+        and set(verdict.methods) == {"level-up"}
+    ]
 
 
 def _nature_name(conn: sqlite3.Connection, nature: str) -> str | None:
@@ -1120,6 +1182,21 @@ def export_team(
         move_ids = [db.resolve_move(conn, move) for move in member.moves]
         values = db.resolve_move_values(conn, move_ids, scope.version_group_id)
         lines.extend(f"- {values[move_id].name}" for move_id in move_ids)
+
+        # Keyed on the identifier `can_learn` echoes back, so the note reads
+        # "Megahorn" rather than whatever spelling the caller happened to type.
+        display = {
+            db.normalize_name(raw): values[move_id].name
+            for raw, move_id in zip(member.moves, move_ids, strict=True)
+        }
+        late = _below_learn_level(conn, member, scope, display)
+        if late:
+            notes.append(
+                f"{species.name} is listed at level {member.level}, below the level that "
+                f"teaches {', '.join(late)} — and level-up is the only route to "
+                f"{'them' if len(late) > 1 else 'it'} in {scope.game}. Exported as given; "
+                "the moveset is reachable, just not yet."
+            )
 
         blocks.append("\n".join(lines))
 

@@ -78,6 +78,26 @@ cases:
       generations, this returns legal, reads as entirely plausible, and makes the
       whole team builder untrustworthy. Do not delete or weaken this case.
 
+  - name: salamence_emerald_rock_slide_is_an_emerald_only_tutor
+    tool: can_learn
+    args: { pokemon: salamence, moves: [rock-slide], game: emerald }
+    expect:
+      all_legal: true
+      contains:
+        - { move: rock-slide, legal: true, methods: [tutor] }
+    why: >-
+      *** Leakage WITHIN generation 3, which every other case here is blind to. ***
+      The draco-meteor case catches a leak across generations, where the wrong
+      answer at least comes from a different era. This one catches the quieter
+      shape: Emerald is version group 6 and Ruby/Sapphire is 5, same generation,
+      same species, near-identical learnsets — except the Battle Frontier tutors,
+      which are Emerald's alone. Rock Slide is not a TM in generation 3, so a
+      Salamence gets it from an Emerald tutor and nowhere else.
+      Found by mutation: rebinding Emerald's version group to 5 left every Tier-1
+      learnset test green except one paging test that caught it by accident.
+      `methods: [tutor]` is asserted, not just `all_legal`, because a leak that
+      relabels the row is the same defect wearing a legal verdict.
+
   - name: salamence_hgss_accepts_draco_meteor
     tool: can_learn
     args: { pokemon: salamence, moves: [draco-meteor], game: heartgold-soulsilver }
@@ -999,6 +1019,28 @@ cases:
       same resolvers every other tool uses, so `ice-fang` comes out as Showdown spells
       it rather than as it was typed — an export that echoes its input produces a paste
       that silently drops a Pokémon on import.
+
+  - name: export_team_flags_a_move_the_listed_level_cannot_have_yet
+    tool: export_team
+    args:
+      team:
+        - { pokemon: heracross, moves: [megahorn], level: 48 }
+      game: heartgold-soulsilver
+    expect:
+      contains:
+        - "Heracross is listed at level 48"
+        - "level-up at 55"
+      not_contains:
+        - "illegal"
+    why: >-
+      The one seam the Phase 4 live gate found. Qwen exported a level 48 Heracross
+      carrying Megahorn — learned at 55, and level-up is its only route in HGSS — and
+      caught the tension in prose while the exported block did not reflect it. The
+      observation exists to close that, and the not_contains is the load-bearing half:
+      this tool formats and team_check judges, so the moveset is REACHABLE, just not
+      yet, and calling it illegal would be a second legality opinion and a wrong one.
+      Its silence on TM and egg moves is pinned in tests/test_export_team.py, because
+      a caveat that fires on every export is read as boilerplate within a day.
 
   - name: export_team_omits_tera_and_says_why
     tool: export_team

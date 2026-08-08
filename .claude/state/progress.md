@@ -1,21 +1,20 @@
 # Project Progress
 
 ## Current Phase
-Phase: 4
-Title: team_check, export_team, agent prompt, team-building Skill
-Status: READY TO DELEGATE — **this is the phase where the Cherry Studio gate BLOCKS**
+Phase: 5 — THE LAST PHASE
+Title: eval harness completion, `--refresh`, docs, and the queued cleanup list
+Status: IN PROGRESS
 
-Committed through `d541ff0`. **887 tests, 0 skipped.** 10 of 11 tools built; 12 at full build.
+**1050 passed, 0 skipped, 68 eval cases, 8 mutants.** All 12 tools built and the Phase 4 gate PASSED
+live through Qwen 3.8. (`test_mutation_harness.py` collects **9** tests — 8 mutants plus the
+refuses-a-verdict-when-nothing-ran guard. Same conflation as eval cases vs pytest nodes.)
 
-**Phase 4's exit criterion does double duty:** a full HGSS team of 6 through Qwen 3.8 is both the
-feature test AND the measurement that validates the 12-tool decision above. The user's three
-single-query tests passed (3/3 correct selection from 9 tools); a six-Pokémon team is many more calls,
-more context, more chances to drift. If selection degrades, climb §3.2's ladder — but measure first.
+Exit criterion (PLAN.md §2): *"Regression suite green; `--refresh` detects upstream changes."* — met.
+`--refresh` covers **83 sources** (82 CSVs + Showdown) and was verified live in all four states.
 
-**Verification debt carried into this gate:** the Phase 3 cleanup commit (`d541ff0`) is test-only plus
-three docstrings, closing `code-reviewer`'s own two WARNINGs with mutation evidence. Rather than open a
-round for it, its verification is folded into Phase 4's review. Flag it in that delegation so it is a
-decision and not a lapse.
+⚠️ **Count discipline:** "eval cases" means entries in `known_answers.yaml` (**68**). `tests/test_evals.py`
+collects **73** nodes — 68 parametrized plus 5 meta-tests. Both agents and I have conflated these;
+quote the YAML count.
 
 **Git: work is now committed on branch `phase-1-tier1` (one commit per phase as each closes its
 review gate; fast-forwardable to main). Before 2026-08-06 nothing but PLAN.md and the .claude/
@@ -108,7 +107,8 @@ confirmed in production.
   violation and rebuilding over a good DB: exit 1, target byte-identical by md5, integrity ok.
 
   Exit codes: 0 ok · 1 failed · 3 upstream drift · 4 launch-game count mismatch (DB still written).
-  `--refresh` covers all 78 sources including Showdown. `wiki_cache` carries across rebuilds, gated on
+  `--refresh` covers all **83 sources** (82 CSVs + Showdown; grew from 78 when `item_game_indices`
+  and `pokemon_items` landed at `schema_version` 3). `wiki_cache` carries across rebuilds, gated on
   `meta.schema_version`, with `--no-cache-carryover`.
 
   Three schema constraints relaxed because upstream violates them, each confirmed as the complete set
@@ -155,14 +155,130 @@ confirmed in production.
   Suite is mutation-tested throughout — every claimed guard was verified by reintroducing the bug and
   confirming red, then restoring and diffing.
 
-## Current Phase Tasks (2)
-- [ ] 2.1 `where_to_find` — **see the HGSS encounter ground truth below; both naive strategies are wrong**
-- [ ] 2.2 `list_obtainable` — badge-count scoping, response must say it's approximate (§3.8)
-- [ ] 2.3 `get_item` — must handle multi-row identifier lookup (`roseli-berry` = ids 723 AND 2279)
-- [ ] 2.4 `type_matchup` — gen-correct via `type_efficacy_past` (6 rows total: Gen 1 + Gen 5 only)
-- [ ] 2.5 Coverage honesty built in, not retrofitted — Emerald 1,647 encounter rows vs HGSS 6,205
-- [ ] 2.6 test-engineer: light up the `where_to_find` feebas eval (`source_not: silently-empty`)
-- [ ] 2.7 **code-reviewer gate** (mandatory)
+## Current Phase Tasks (5) — ALL PHASES COMPLETE
+- [x] 5.1 `--refresh` verified live in all four states; two gaps closed (see the null-ETag entry above)
+- [x] 5.2 `docs/ARCHITECTURE.md` + `docs/DATA_SOURCES.md` written (§1.1), CC BY-NC-SA 2.5 stated (§4)
+- [x] 5.3 `uvx` guidance corrected across `CHERRY_STUDIO_SETUP.md`, `README.md`, PLAN.md §0.6.7 / §1.4
+- [x] 5.4 Queued cleanups closed: `MoveLegality` serializer (−27.8% `can_learn`, −11.2% team report),
+      era item names disclosed not hardcoded, Dry Skin documented, `export_team` level observation
+- [x] 5.5 `PROSE_CLAIMS` made a coupled registry; empty-run guard; mutation harness committed
+- [x] 5.6 **code-reviewer gate** — passed at 1046, final delta gated separately
+
+**Nothing is queued. The backlog below is documented, not scheduled** — anything acted on should be a
+deliberate decision with its own gate, not a leftover.
+
+## 🚨 `uvx` IS THE WRONG LAUNCH PATH FOR A LIVE CHECKOUT — diagnosed 2026-08-06
+**PLAN.md §1.4 recommends `uvx`. For a working development checkout that is wrong, and it silently
+serves stale code.** Change the Cherry Studio MCP entry to the venv console script:
+
+```
+command: /Users/anthonygrimaldi/Documents/VSCode-Projects/poke-tools/.venv/bin/poke-tools-mcp
+args:    (none)
+env:     POKE_TOOLS_DB=/Users/anthonygrimaldi/Documents/VSCode-Projects/poke-tools/data/pokedex.sqlite
+```
+Verified through that exact path: **12 tools, `database_present: true`, `via: POKE_TOOLS_DB`.** It is
+an editable install, so it imports from `src/` — no build, no cache, no version-bump dance, and the
+`--python 3.12` workaround is unnecessary (the venv is already 3.12.9).
+
+**Evidence, four ways:**
+| path | tools |
+|---|---|
+| source in-process | 12 |
+| freshly built wheel, clean venv | 12 |
+| repo `.venv/bin/poke-tools-mcp` | **12** ✅ |
+| `uvx --python 3.12 --from <repo>` | **9** ❌ |
+
+`uvx` served `server.py` at **16,203 bytes** from `~/.cache/uv/archive-v0/I3GvZmb0PiOJVEXP/`, against
+a repo source of 25,738 bytes — `has team_check: False`. It survived **both** `--refresh` **and**
+`uv cache clean poke-tools` (a name-based clean doesn't reach an archive built from a path source).
+No `uv tool` install exists and there is no `poke-tools` on PyPI, so nothing else was shadowing it.
+
+**Why §1.4 got this wrong:** it recommended `uvx` because Cherry Studio ships its own runtime and
+won't reuse a system install — reasoning about *finding* `uv`, not about caching semantics. `uvx` is
+for published tools. For a checkout under active development it lags every phase, and the package
+version has been `0.1.0` since Phase 0, so nothing signals a rebuild.
+
+**Follow-up when work resumes:** correct `docs/CHERRY_STUDIO_SETUP.md` (it currently documents the
+`uvx` path as verified) and PLAN.md §1.4. The `uvx` path may still be right for a *packaged* install
+some day; it is wrong for this repo now.
+
+## ✅ PHASE 4 GATE — PASSED on the 12-tool surface (2026-08-06)
+Re-run after switching to the venv launch path. **Every §2 phase 4 criterion met**, and the
+12-tool budget decision is validated — no consolidation needed.
+
+**Delivered:** six-member HGSS team, Cyndaquil start, pre-Lance. Legal movesets, obtainable items,
+cited locations, and a Showdown block that is **byte-identical to what `export_team` produces** when
+the same team is passed to it directly.
+
+**Independently verified against the tools afterward — 100% accurate:**
+- `team_check` → `all_moves_legal: True`, `confidence: high`, all 6 items `available_in_game: True`
+- `types_covered: 17`, `coverage_gaps: []` — matching its claim "all 17 types are hit
+  super-effectively by someone"
+- 6/6 level and method claims exact: Megahorn 55, Power Gem 59, Donphan Earthquake 46, Rapid Spin 6
+- "No X-Scissor in this game — I checked" → `legal=False`. It verified a **negative** and said so.
+- Extrasensory correctly identified as an egg move with `egg_source: cyndaquil` — the Phase 1b
+  chain-union work surfacing in a real answer
+
+**The three things that failed last run, all fixed by the launch-path change:**
+1. **Zero external web citations** (was 5 — serebii, guidestrats, dittobase). `wiki_lookup` used
+   instead, Bulbapedia cited 8×.
+2. **Showdown export present**, and identical to `export_team`'s output.
+3. **`team_check` ran** — and its `hm-move` observation reached the user's answer as
+   *"Waterfall is an HM (HM07) — permanent unless you use the Move Deleter."*
+
+**Honesty propagation working end to end, unprompted:**
+- §0.2's item-acquisition gap reported plainly: *"my data doesn't record where items are found — ask
+  if you want me to Bulbapedia-lookup specific ones."*
+- Thin-data caveat volunteered: *"the only encounter my data records is a Route 27 swarm — other
+  sources may exist that aren't recorded here."*
+- **Phase 2's version-exclusive encounter work paid off visibly:** *"this encounter is
+  HeartGold-exclusive, so you're good, but it wouldn't be available in SoulSilver."* That is the
+  385/405 exclusive-row handling reaching a user-facing answer.
+
+**One minor inconsistency, not a tool defect:** the export lists Megahorn on a Lv 48 Heracross while
+Megahorn is learned at Lv 55. The model flagged it in prose ("Grind it to 55 for Megahorn before the
+League") but the exported block doesn't reflect the tension. `export_team` is a formatter and does not
+validate level-vs-learn-level; worth considering whether it should observe on it.
+
+**Tool budget: decision validated.** Qwen 3.8 selected correctly across ~12 tools and a long
+multi-step build, including `can_learn` 26× and `team_check` 23×. `type_matchup` was never called —
+coverage came from `team_check` instead, which is the §3.2 fold happening naturally in usage rather
+than by consolidation. **Do not climb the ladder.**
+
+The user ran "build me a full team of 6 for HeartGold, Cyndaquil start, obtainable entirely prior to
+Lance." Cherry Studio's MCP connection was cached from **before** Phase 3/4 registered `wiki_lookup`,
+`team_check` and `export_team`. The model said so itself in reasoning:
+
+> No wiki_lookup, no team_check, no export_team in the function definitions! The system prompt
+> mentions them, but they're not in the actual bound function set. So I can't call them.
+
+**Consequences, all explained by the stale surface — none are tool defects:**
+- No Showdown export → `export_team` wasn't bound. §2 phase 4's exit criterion is **untested**.
+- Answer cites serebii / guidestrats / dittobase → `wiki_lookup` wasn't bound, so it fell back to
+  open-web search for item and TM locations.
+- `team_check` never ran, so none of Phase 4's composition or honesty-propagation work was exercised.
+
+**What DID pass, on the 9-tool surface — and it passed hard.** Every factual claim verified against
+the tools afterward:
+- 6/6 movesets `all_legal: true`, re-confirmed by calling `can_learn` directly.
+- **11/11 level claims exact** (Typhlosion Flamethrower 42, Gyarados Ice Fang 32 / Dragon Dance 44,
+  Ampharos Signal Beam 42, Heracross Close Combat 37 / Night Slash 1 / Aerial Ace 13, Lapras Ice Beam
+  32 / Body Slam 18, Crobat Bite 13 / Confuse Ray 21).
+- Gen-correct type reasoning unprompted: *"Psychic can't touch Dark in Gen 4."*
+- **It handled `list_obtainable`'s badge-proxy limitation correctly on its own**: *"the 8-badge
+  candidate list also over-reports Kanto areas like Cerulean Cave and Safari Zone blocks, which open
+  after the Champion — I excluded all of those."* That is §3.8's disclosed approximation being used
+  as intended rather than taken literally.
+- Caught real constraints and surfaced them in a dedicated Caveats section: TM26 Earthquake is inside
+  Victory Road, TM29 Psychic is Kanto-only so it revised Lapras's moveset, Leftovers isn't
+  realistically obtainable pre-E4.
+
+**Two findings that survive the re-run and are worth acting on:**
+1. **The model detected the prompt/tool mismatch and adapted honestly** rather than hallucinating a
+   call. Good behaviour — but it means a stale MCP connection degrades silently into web search.
+2. **Web-sourced facts were cited to the user indistinguishably from tool-sourced ones.** The claims
+   happened to be right, but a reader cannot tell which came from verified tooling. Worth a line in
+   `AGENT_PROMPT.md`: if a fact came from outside the tools, say so.
 
 ## 🎯 TOOL BUDGET — decided 2026-08-06, DEPARTS FROM PLAN.md §3.2
 **Decision: ship all 12 tools. Do NOT climb §3.2's consolidation ladder pre-emptively.**
@@ -224,6 +340,12 @@ actually bit. Same-session round-trips are covered; cross-build poisoning is not
 Five instances so far, all found late, all after a green result created false confidence. **Before
 trusting any sweep, ask what it is capable of failing on.**
 
+0. **`--refresh` could report "Up to date" having verified nothing.** The comparison was
+   `stamped != current`, so a null upstream ETag equalled a null stamp — if GitHub ever stopped
+   sending `ETag` headers, every one of 83 sources would "match". Found in Phase 5, *in the §2 exit
+   criterion itself*. Now three-way: verified-same / verified-changed / **unverifiable**, with drift
+   outranking unverifiable. 0 of 83 sources are affected today, which is why it needed a deliberate
+   check rather than an observation.
 1. **Emerald cannot expose version-union bugs** — it is one version_id, HGSS is two.
 2. **Emerald cannot expose alternate-form gaps** — its only diverging form (`deoxys-speed`) is a pure
    superset (71 extra rows, 0 missing). A 448-pair sweep and a 365-test suite both passed while
@@ -238,6 +360,30 @@ trusting any sweep, ask what it is capable of failing on.**
 
 Corollary that keeps proving out: **assert the complement.** A guard and its inverse, or the guard
 may be inert.
+
+## ⚠️ THE SIBLING PATTERN: GUARDS WITH THEIR OWN UNGUARDED DEPENDENCY
+Named by `implementer` in Phase 5, and distinct from the above. A mechanism that enforces a constraint
+acquires a constraint of its own that nothing enforces. **The fix works; the fix's dependency is what
+nobody watches.**
+
+1. **`PAYLOAD_VERSION`** guarded against stale wiki payloads — and depended on someone remembering to
+   bump a number. It wasn't bumped, and a warm cache served a superseded build for a full round while
+   two agents measured the same response 3.5 KB apart.
+2. **The docs-coupling test** replaced a human-memory guard on the probe TTL — and embedded the
+   number `30` in its own heading matcher, so a *correct* docs rename to "7-day blind spot" would have
+   failed the lookup and told the editor to go change a test constant. The guard would have argued
+   against the right behaviour.
+3. **`test_refresh.py` asserted `== build.EXIT_DRIFT`** — self-referential, so mutating the constant to
+   `0` survived. A test comparing the code to itself cannot fail.
+
+Ask of every new guard: *what does this guard itself depend on, and what watches that?*
+
+Two more Phase 5 process notes worth keeping:
+- **State the serialization whenever you quote a size.** PLAN.md §0.6.6 says 4,162 B and
+  `ARCHITECTURE.md` says 5,629 B for the same call — `exclude_none` versus not. Both correct, neither
+  stated its method, and a reader judging a field set gets a 35% different answer.
+- **"Eval cases" means YAML entries (68), not pytest nodes (73, incl. 5 meta-tests).** Both agents and
+  the orchestrator conflated these.
 
 ## ⚠️ TEST FORM/ENCOUNTER BEHAVIOUR AGAINST HGSS, NOT EMERALD
 Learned the hard way in 1b. Emerald's only diverging form (`deoxys-speed`) is a **pure superset** —
@@ -353,6 +499,60 @@ otherwise touch, so no conflict; 1b's review covers them):**
   existing-but-unreadable `pokedex.sqlite` (mode 000) makes the build FAIL where the docstring says it
   should decline and continue — the replace would have succeeded, since POSIX `os.replace` needs write
   on the directory, not the file. Move the connect inside the try.
+
+**BACKLOG — documented, not scheduled (2026-08-08).** Each needs its own gate if acted on.
+
+- **`docs/ARCHITECTURE.md:127` quotes `REVISION_TTL_DAYS` outside the docs-coupling scan.** `_DOCS_PATH`
+  is hardcoded to `DATA_SOURCES.md`. **Proven, not inferred:** in a copy with the constant at 7 and
+  every `DATA_SOURCES.md` figure correctly updated, the full suite ran **1049 passed** while
+  ARCHITECTURE still read *"30-day TTL … up to a month."* Silent, green, wrong.
+  **Don't widen `_DOCS_PATH`** — "a month" is prose that `\b(\d+)[\s-]days?\b` misses anyway. Drop the
+  figure from ARCHITECTURE.md and let the cross-reference at `:131` carry it; that removes the second
+  copy rather than coupling it. Today the number is right in both files, so this is a missing coupling,
+  not a live falsehood.
+- **`tests/mutation/harness.py` misreports an identity mutation.** When `Mutant.value` equals the real
+  constant the mutation is a no-op, but the failure says *"MUTANT SURVIVED … nothing checks it"* —
+  false, and misdirecting. It bites for `probe-ttl-shortened-behind-the-docs` at value 7, which is
+  exactly the value the ceiling test blesses as free, so the collision is a likely future edit. A
+  precondition in `run_mutant` (`getattr(module, attribute) != mutant.value` → `MutationRefused`) turns
+  it into an accurate refusal and generalises. Same family as the empty-run refusal.
+- **Only the TTL figure is doc-coupled.** `DATA_SOURCES.md:46,268,311` (82 CSVs / 83 sources),
+  `ARCHITECTURE.md:139` (~12 tools), `:143` (40-row cap), `:110` (15 KB threshold) are uncoupled.
+  Pre-existing and lower-stakes — none of them bounds a blind-spot window.
+
+- **The size figures in PLAN.md §0.6.6 and `ARCHITECTURE.md` §4 are guarded by nothing.** They now
+  cross-reference each other correctly (4,162 B `exclude_none` / 5,629 B `model_dump_json()`), but no
+  test asserts either number against a real serialization, and none asserts the two documents agree.
+  If the default field set changes, both go stale silently **while the cross-reference keeps claiming
+  they reconcile.** That is the sibling pattern again — the mechanism here is a cross-reference whose
+  correctness nothing checks. Fix: serialize
+  `get_learnset("garchomp","heartgold-soulsilver",methods=["machine"])` both ways and assert the byte
+  counts against the figures quoted in both docs. `implementer` identified this and correctly declined
+  to write it (`tests/` was off-limits, and it is `test-engineer`'s call).
+
+**Closed in Phase 5 — kept for the reasoning, not as work:**
+- **`PROSE_CLAIMS` doesn't couple the way its docstring claims.** It's a blacklist of five known-bad
+  fragments matched by substring, so a *new* self-describing sentence is never evaluated against any
+  predicate. `code-reviewer` demonstrated it: replacing `_NO_LEGAL_MOVES_NOTE` with a sentence that
+  flatly contradicts the only state emitting it left the suite at 1016 passed. Fix is the
+  registry+complement pattern this suite already uses twice — enumerate the module's `_*_NOTE`
+  constants and require each to be matched by a fragment or explicitly allowlisted with a reason.
+- **Nothing committed fails on a fully-skipped run.** `POKE_TOOLS_DB=/nonexistent uv run pytest` →
+  121 skipped, exit 0. Pre-existing since Phase 1 (`conftest.py`'s skip-with-actionable-reason, which
+  is otherwise the right design). The mutation harness that caught this hazard lives only in scratch
+  and is not in the repo, so the next agent gets no protection from it.
+- **Era-incorrect item names — narrower than first scoped.** `export_team` is NOT affected: Showdown
+  itself renamed the item to Leek and uses that name across all generations, so `Donphan @ Leek`
+  imports correctly. The defect is confined to human-facing prose in `get_item` and the notes
+  `team_check` carries up. Lower urgency than originally scheduled.
+- `@model_serializer` dropping `None` from `MoveLegality` — 9.9% saving, couples a Phase 1b wire
+  change; land it alongside the eval-harness pass so both are reviewed together.
+- Consider tightening `SIX_MEMBER_REPORT_CEILING_BYTES` 16,000 → 12,000. A realistic six-member HGSS
+  party measures 9,259 B, within 30 B of the corpus figure, so the number is stable across teams.
+  12 KB absorbs prose growth and still catches a 30% jump.
+- `Dry Skin` is in the immunity table for Water but also takes 1.25× from Fire in Gen 4;
+  `_TYPE_PRESSURE_ABILITY_NOTE` names only damage-*reducing* abilities. Under-claim only.
+- `docs/ARCHITECTURE.md` and `docs/DATA_SOURCES.md` (§1.1) still don't exist.
 
 **Into Phase 2 delegation:**
 - The eval `source_not: "silently-empty"` sentinel is currently implemented as: empty result is only
