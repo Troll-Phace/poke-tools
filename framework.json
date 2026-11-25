@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "framework_version": "0.2.0-draft",
+  "project_name": "poke-tools",
+  "default_branch": "main",
+  "issue_repository": "Troll-Phace/poke-tools",
+  "commands": {
+    "verify": "uv run --offline --locked --no-sync ruff check . && uv run --offline --locked --no-sync ruff format --check . && uv run --offline --locked --no-sync pytest -q --deselect='tests/test_evals.py::test_known_answer[leftovers_acquisition_from_bulbapedia]' --deselect='tests/test_evals.py::test_known_answer[hgss_move_tutor_section]' --deselect='tests/test_evals.py::test_known_answer[emerald_tutors_answer_the_earthquake_question_by_absence]'",
+    "tests": "uv run --offline --locked --no-sync pytest -q --deselect='tests/test_evals.py::test_known_answer[leftovers_acquisition_from_bulbapedia]' --deselect='tests/test_evals.py::test_known_answer[hgss_move_tutor_section]' --deselect='tests/test_evals.py::test_known_answer[emerald_tutors_answer_the_earthquake_question_by_absence]'",
+    "lint": "uv run --offline --locked --no-sync ruff check .",
+    "format_check": "uv run --offline --locked --no-sync ruff format --check .",
+    "dev": "uv run --offline --locked --no-sync poke-tools-mcp",
+    "tests_live": "uv run --offline --locked --no-sync pytest -q 'tests/test_evals.py::test_known_answer[leftovers_acquisition_from_bulbapedia]' 'tests/test_evals.py::test_known_answer[hgss_move_tutor_section]' 'tests/test_evals.py::test_known_answer[emerald_tutors_answer_the_earthquake_question_by_absence]'"
+  },
+  "context_max_chars": 6000,
+  "backlog_max_items": 10,
+  "backlog_max_age_hours": 24,
+  "phase_plan_path": "PLAN.md",
+  "progress_path": ".claude/state/progress.md"
+}
