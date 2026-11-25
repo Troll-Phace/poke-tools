@@ -9,3 +9,6 @@ data/pokedex.sqlite.build-tmp
 data/source-cache/
 .claude/settings.local.json
 .DS_Store
+
+# Codex harness cache and session records
+/.agent-runtime/
